@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 )
-dsadsa
+
 var Articles []models.Article
 
 func homePage(writer http.ResponseWriter, request *http.Request) {
