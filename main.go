@@ -41,11 +41,28 @@ func createNewArticle(writer http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(writer).Encode(article)
 }
 
+func deleteArticle(writer http.ResponseWriter, request *http.Request) {
+	fmt.Println("Endpoint Hit: deleteArticle")
+	vars := mux.Vars(request)
+	id := vars["id"]
+
+	for index, article := range Articles {
+		if article.Id == id {
+			//Articles equals all values before index (remember slices don't include value at the max index specified)
+			//Plus all the values one index after the found index (remember slices do include the value at the min index)
+			//the ... will pass the slice to the variadic function
+			Articles = append(Articles[:index], Articles[index+1:]...)
+		}
+	}
+
+}
+
 func handleRequests() {
 	myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/", homePage)
 	myRouter.HandleFunc("/article", createNewArticle).Methods("POST")
 	myRouter.HandleFunc("/article", returnAllArticles)
+	myRouter.HandleFunc("/article/{id}", deleteArticle).Methods("DELETE")
 	myRouter.HandleFunc("/article/{id}", returnSingleArticle)
 	log.Fatalln(http.ListenAndServe(":10000", myRouter))
 }
