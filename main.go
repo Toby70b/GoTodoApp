@@ -21,18 +21,29 @@ func returnAllArticles(writer http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(writer).Encode(Articles)
 }
 
+func returnSingleArticle(writer http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	key := vars["id"]
+	for _, article := range Articles {
+		if article.Id == key {
+			json.NewEncoder(writer).Encode(article)
+		}
+	}
+}
+
 func handleRequests() {
 	myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/", homePage)
 	myRouter.HandleFunc("/articles", returnAllArticles)
+	myRouter.HandleFunc("/article/{id}", returnSingleArticle)
 	log.Fatalln(http.ListenAndServe(":10000", myRouter))
 }
 
 func main() {
 	fmt.Println("Rest API v2.0 - Mux Routers")
 	Articles = []models.Article{
-		{Title: "Hello", Desc: "Article Description", Content: "Article Content"},
-		{Title: "Hello 2", Desc: "Article Description", Content: "Article Content"},
+		{Id: "1", Title: "Hello", Desc: "Article Description", Content: "Article Content"},
+		{Id: "2", Title: "Hello 2", Desc: "Article Description", Content: "Article Content"},
 	}
 	handleRequests()
 }
