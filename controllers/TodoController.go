@@ -18,18 +18,20 @@ type TodoController struct {
 func (controller *TodoController) returnAllTodos(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: returnAllTodos")
 	response := controller.todoService.ReturnAllTodos()
-	json.NewEncoder(writer).Encode(response)
+	returnResponse(writer, response)
 }
 
 func (controller *TodoController) returnSingleTodo(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: returnSingleTodo")
 	vars := mux.Vars(request)
 	todoId := vars["id"]
-	response, err := controller.todoService.ReturnSingleTodo(todoId)
+	todo, err := controller.todoService.ReturnSingleTodo(todoId)
+
 	if err != nil {
-		json.NewEncoder(writer).Encode(err.Error())
+		returnResponse(writer, err.Error())
 	} else {
-		json.NewEncoder(writer).Encode(response)
+		returnResponse(writer, todo)
+
 	}
 }
 
@@ -37,12 +39,16 @@ func (controller *TodoController) createNewTodo(writer http.ResponseWriter, requ
 	fmt.Println("Endpoint Hit: createNewTodo")
 	reqBody, _ := io.ReadAll(request.Body)
 	var todo models.Todo
-	json.Unmarshal(reqBody, &todo)
+	err := json.Unmarshal(reqBody, &todo)
+	if err != nil {
+		log.Println("Error deserializing the request", err)
+		returnResponse(writer, "Internal Server Error")
+	}
 	response, err := controller.todoService.CreateNewTodo(todo)
 	if err != nil {
-		json.NewEncoder(writer).Encode(err.Error())
+		returnResponse(writer, err.Error())
 	} else {
-		json.NewEncoder(writer).Encode(response)
+		returnResponse(writer, response)
 	}
 }
 
@@ -57,12 +63,16 @@ func (controller *TodoController) updateTodo(writer http.ResponseWriter, request
 	fmt.Println("Endpoint Hit: updateTodo")
 	reqBody, _ := io.ReadAll(request.Body)
 	var todo models.Todo
-	json.Unmarshal(reqBody, &todo)
+	err := json.Unmarshal(reqBody, &todo)
+	if err != nil {
+		log.Println("Error deserializing the request", err)
+		returnResponse(writer, "Internal Server Error")
+	}
 	response, err := controller.todoService.UpdateTodo(todo)
 	if err != nil {
-		json.NewEncoder(writer).Encode(err.Error())
+		returnResponse(writer, err.Error())
 	} else {
-		json.NewEncoder(writer).Encode(response)
+		returnResponse(writer, response)
 	}
 
 }
@@ -80,4 +90,11 @@ func HandleRequests() {
 	fmt.Println("TodoController Listening...")
 	log.Fatalln(http.ListenAndServe(":10000", myRouter))
 
+}
+
+func returnResponse(writer http.ResponseWriter, body any) {
+	err := json.NewEncoder(writer).Encode(body)
+	if err != nil {
+		panic(err)
+	}
 }
