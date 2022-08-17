@@ -20,10 +20,15 @@ func (service *TodoService) ReturnSingleTodo(id string) (models.Todo, error) {
 			return todo, nil
 		}
 	}
-	return models.Todo{}, errors.New(fmt.Sprintf("Could not find todo with id [%s]", id))
+	return models.Todo{}, errors.New(fmt.Sprintf("could not find todo with id [%s]", id))
 }
 
 func (service *TodoService) CreateNewTodo(newTodo models.Todo) (models.Todo, error) {
+	err := validateTodo(newTodo)
+	if err != nil {
+		return models.Todo{}, err
+	}
+
 	fmt.Println("Endpoint Hit: createNewTodo")
 	for _, todo := range service.Todos {
 		if todo.Id == newTodo.Id {
@@ -47,6 +52,10 @@ func (service *TodoService) DeleteTodo(id string) {
 }
 
 func (service *TodoService) UpdateTodo(newTodo models.Todo) (models.Todo, error) {
+	err := validateTodo(newTodo)
+	if err != nil {
+		return models.Todo{}, err
+	}
 	fmt.Println("Endpoint Hit: updateTodo")
 	for i, todo := range service.Todos {
 		if todo.Id == newTodo.Id {
@@ -54,5 +63,12 @@ func (service *TodoService) UpdateTodo(newTodo models.Todo) (models.Todo, error)
 			return newTodo, nil
 		}
 	}
-	return models.Todo{}, errors.New(fmt.Sprintf("Could not find todo with id [%s]", newTodo.Id))
+	return models.Todo{}, errors.New(fmt.Sprintf("could not find todo with id [%s]", newTodo.Id))
+}
+
+func validateTodo(todo models.Todo) error {
+	if todo.Id == "" {
+		return errors.New("todo Id cannot be null")
+	}
+	return nil
 }

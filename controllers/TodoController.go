@@ -49,7 +49,7 @@ func (controller *TodoController) createNewTodo(writer http.ResponseWriter, requ
 func (controller *TodoController) deleteTodo(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: deleteTodo")
 	vars := mux.Vars(request)
-	todoId := vars["todoId"]
+	todoId := vars["id"]
 	controller.todoService.DeleteTodo(todoId)
 }
 
@@ -74,9 +74,9 @@ func HandleRequests() {
 	myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/todo", controller.createNewTodo).Methods("POST")
 	myRouter.HandleFunc("/todo", controller.updateTodo).Methods("PUT")
-	myRouter.HandleFunc("/todo", controller.returnAllTodos)
+	myRouter.HandleFunc("/todo", controller.returnAllTodos).Methods("GET")
 	myRouter.HandleFunc("/todo/{id}", controller.deleteTodo).Methods("DELETE")
-	myRouter.HandleFunc("/todo/{id}", controller.returnSingleTodo)
+	myRouter.HandleFunc("/todo/{id}", controller.returnSingleTodo).Methods("GET")
 	fmt.Println("TodoController Listening...")
 	log.Fatalln(http.ListenAndServe(":10000", myRouter))
 
