@@ -3,6 +3,7 @@ package controllers
 import (
 	"TodoApp/models"
 	"TodoApp/services"
+	"TodoApp/utils"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -15,10 +16,14 @@ type TodoController struct {
 	todoService services.TodoService
 }
 
+func NewTodoController(todoService services.TodoService) TodoController {
+	return TodoController{todoService}
+}
+
 func (controller *TodoController) returnAllTodos(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: returnAllTodos")
-	response := controller.todoService.ReturnAllTodos()
-	returnResponse(writer, response)
+	todos := controller.todoService.ReturnAllTodos()
+	utils.ReturnJsonResponse(writer, http.StatusOK, todos)
 }
 
 func (controller *TodoController) returnSingleTodo(writer http.ResponseWriter, request *http.Request) {
@@ -28,9 +33,9 @@ func (controller *TodoController) returnSingleTodo(writer http.ResponseWriter, r
 	todo, err := controller.todoService.ReturnSingleTodo(todoId)
 
 	if err != nil {
-		returnResponse(writer, err.Error())
+		utils.ReturnJsonResponse(writer, http.StatusNotFound, err.Error())
 	} else {
-		returnResponse(writer, todo)
+		utils.ReturnJsonResponse(writer, http.StatusOK, todo)
 
 	}
 }
@@ -42,13 +47,14 @@ func (controller *TodoController) createNewTodo(writer http.ResponseWriter, requ
 	err := json.Unmarshal(reqBody, &todo)
 	if err != nil {
 		log.Println("Error deserializing the request", err)
-		returnResponse(writer, "Internal Server Error")
+		http.Error(writer, "Internal Server Error", 500)
 	}
 	response, err := controller.todoService.CreateNewTodo(todo)
 	if err != nil {
-		returnResponse(writer, err.Error())
+		utils.ReturnJsonResponse(writer, http.StatusConflict, err.Error())
 	} else {
-		returnResponse(writer, response)
+		utils.ReturnJsonResponse(writer, http.StatusCreated, response)
+
 	}
 }
 
@@ -57,6 +63,7 @@ func (controller *TodoController) deleteTodo(writer http.ResponseWriter, request
 	vars := mux.Vars(request)
 	todoId := vars["id"]
 	controller.todoService.DeleteTodo(todoId)
+	utils.ReturnJsonResponse(writer, http.StatusOK, "Todo Deleted Successfully")
 }
 
 func (controller *TodoController) updateTodo(writer http.ResponseWriter, request *http.Request) {
@@ -66,21 +73,19 @@ func (controller *TodoController) updateTodo(writer http.ResponseWriter, request
 	err := json.Unmarshal(reqBody, &todo)
 	if err != nil {
 		log.Println("Error deserializing the request", err)
-		returnResponse(writer, "Internal Server Error")
+		http.Error(writer, "Internal Server Error", 500)
 	}
 	response, err := controller.todoService.UpdateTodo(todo)
 	if err != nil {
-		returnResponse(writer, err.Error())
+		utils.ReturnJsonResponse(writer, http.StatusNotFound, err.Error())
 	} else {
-		returnResponse(writer, response)
+		utils.ReturnJsonResponse(writer, http.StatusOK, response)
 	}
 
 }
 
-func HandleRequests() {
+func (controller TodoController) HandleRequests() {
 	fmt.Println("Starting TodoController...")
-	var todos []models.Todo
-	var controller = TodoController{todoService: services.TodoService{Todos: todos}}
 	myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/todo", controller.createNewTodo).Methods("POST")
 	myRouter.HandleFunc("/todo", controller.updateTodo).Methods("PUT")
@@ -90,11 +95,4 @@ func HandleRequests() {
 	fmt.Println("TodoController Listening...")
 	log.Fatalln(http.ListenAndServe(":10000", myRouter))
 
-}
-
-func returnResponse(writer http.ResponseWriter, body any) {
-	err := json.NewEncoder(writer).Encode(body)
-	if err != nil {
-		panic(err)
-	}
 }

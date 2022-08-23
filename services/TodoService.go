@@ -10,6 +10,10 @@ type TodoService struct {
 	Todos []models.Todo
 }
 
+func NewTodoService(todos []models.Todo) TodoService {
+	return TodoService{todos}
+}
+
 func (service *TodoService) ReturnAllTodos() []models.Todo {
 	return service.Todos
 }
@@ -32,7 +36,7 @@ func (service *TodoService) CreateNewTodo(newTodo models.Todo) (models.Todo, err
 	fmt.Println("Endpoint Hit: createNewTodo")
 	for _, todo := range service.Todos {
 		if todo.Id == newTodo.Id {
-			return models.Todo{}, errors.New(fmt.Sprintf("Todo with id [%s] already found", newTodo.Id))
+			return models.Todo{}, errors.New(fmt.Sprintf("Todo with id [%s] already exists", newTodo.Id))
 		}
 	}
 	service.Todos = append(service.Todos, newTodo)
