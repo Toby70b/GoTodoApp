@@ -12,20 +12,27 @@ import (
 	"net/http"
 )
 
+// A TodoController represents a REST controller for handling HTTP requests to the API under the "todo/" URI
 type TodoController struct {
 	todoService services.TodoService
 }
 
+// NewTodoController creates a new TodoController object. This is used by Wire when starting the API to perform the
+// necessary dependency injection
 func NewTodoController(todoService services.TodoService) TodoController {
 	return TodoController{todoService}
 }
 
+// returnAllTodos returns all todos items persisted within the DB
 func (controller *TodoController) returnAllTodos(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: returnAllTodos")
 	todos := controller.todoService.ReturnAllTodos()
 	utils.ReturnJsonResponse(writer, http.StatusOK, todos)
 }
 
+// returnSingleTodo returns a single todo item persisted within the DB with an id matching the id passed as a path parameter.
+// The path param is accessed via the map within request parameter. If an existing todo item with an id matching that of
+// the new todo item is not found, and error will be returned instead
 func (controller *TodoController) returnSingleTodo(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: returnSingleTodo")
 	vars := mux.Vars(request)
@@ -40,6 +47,8 @@ func (controller *TodoController) returnSingleTodo(writer http.ResponseWriter, r
 	}
 }
 
+// createNewTodo creates a new todo item and persist it within the DB. If an existing todo item with an id matching
+// that of the new todo item is found, and error will be returned instead
 func (controller *TodoController) createNewTodo(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: createNewTodo")
 	reqBody, _ := io.ReadAll(request.Body)
@@ -58,6 +67,8 @@ func (controller *TodoController) createNewTodo(writer http.ResponseWriter, requ
 	}
 }
 
+// deleteTodo removes a todo item persisted within the DB with an id matching the id passed as a path parameter.
+// The path param is accessed via the map within request parameter
 func (controller *TodoController) deleteTodo(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: deleteTodo")
 	vars := mux.Vars(request)
@@ -66,6 +77,8 @@ func (controller *TodoController) deleteTodo(writer http.ResponseWriter, request
 	utils.ReturnJsonResponse(writer, http.StatusOK, "Todo Deleted Successfully")
 }
 
+// updateTodo modifies an existing todo item with the details from the todo item passed in the request. If an existing
+// todo item with an id matching that of the new todo item is not found, and error will be returned instead
 func (controller *TodoController) updateTodo(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: updateTodo")
 	reqBody, _ := io.ReadAll(request.Body)
@@ -84,6 +97,8 @@ func (controller *TodoController) updateTodo(writer http.ResponseWriter, request
 
 }
 
+// HandleRequests initializes a new MUX router to receive requests under the "todo/" URI and handles them by calling
+// methods within TodoController
 func (controller TodoController) HandleRequests() {
 	fmt.Println("Starting TodoController...")
 	myRouter := mux.NewRouter().StrictSlash(true)
