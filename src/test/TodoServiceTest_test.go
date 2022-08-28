@@ -121,3 +121,63 @@ func TestReturnSingleTodoTodoFound(t *testing.T) {
 		t.Error("expected todo:", expectedTodo, "but received todo:", actualTodo)
 	}
 }
+
+func TestCreateNewTodoValidationError(t *testing.T) {
+	setupTest(t)
+	newTodo := models.Todo{
+		Title:     "Example Title",
+		Desc:      "Example Description",
+		Completed: false,
+	}
+	_, err := todoService.CreateNewTodo(newTodo)
+	if err == nil {
+		t.Error("expected error but no error returned")
+	}
+	if err.Error() != "todo Id cannot be null" {
+		t.Error("expected error message was not found, instead was:", err.Error())
+	}
+	if len(todoService.Todos) != 0 {
+		t.Error("expected array of length", 0, "but received array of length", len(todoService.Todos))
+	}
+}
+
+func TestCreateNewTodoDuplicateIdError(t *testing.T) {
+	setupTest(t)
+	newTodo := models.Todo{
+		Id:        "1",
+		Title:     "Example Title",
+		Desc:      "Example Description",
+		Completed: false,
+	}
+	todoService.Todos = append(todoService.Todos, newTodo)
+	_, err := todoService.CreateNewTodo(newTodo)
+	if err == nil {
+		t.Error("expected error but no error returned")
+	}
+	if err.Error() != "Todo with id [1] already exists" {
+		t.Error("expected error message was not found, instead was:", err.Error())
+	}
+	if len(todoService.Todos) != 1 {
+		t.Error("expected array of length", 1, "but received array of length", len(todoService.Todos))
+	}
+}
+
+func TestCreateNewTodoNewTodoSuccessfullyCreated(t *testing.T) {
+	setupTest(t)
+	newTodo := models.Todo{
+		Id:        "1",
+		Title:     "Example Title",
+		Desc:      "Example Description",
+		Completed: false,
+	}
+	actualNewTodo, err := todoService.CreateNewTodo(newTodo)
+	if err != nil {
+		t.Error("expected no error but error returned")
+	}
+	if len(todoService.Todos) != 1 {
+		t.Error("expected array of length", 1, "but received array of length", len(todoService.Todos))
+	}
+	if newTodo != actualNewTodo {
+		t.Error("expected todo:", newTodo, "but received todo:", actualNewTodo)
+	}
+}
