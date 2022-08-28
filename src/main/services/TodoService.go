@@ -1,7 +1,7 @@
 package services
 
 import (
-	"TodoApp/models"
+	"TodoApp/src/main/models"
 	"errors"
 	"fmt"
 )

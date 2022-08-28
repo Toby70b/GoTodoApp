@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"TodoApp/models"
-	"TodoApp/services"
-	"TodoApp/utils"
+	"TodoApp/src/main/models"
+	"TodoApp/src/main/services"
+	"TodoApp/src/main/utils"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"

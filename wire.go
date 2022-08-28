@@ -1,8 +1,8 @@
 package main
 
 import (
-	"TodoApp/controllers"
-	"TodoApp/services"
+	"TodoApp/src/main/controllers"
+	"TodoApp/src/main/services"
 	"github.com/google/wire"
 )
 
