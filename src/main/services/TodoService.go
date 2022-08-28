@@ -44,7 +44,6 @@ func (service *TodoService) CreateNewTodo(newTodo models.Todo) (models.Todo, err
 		return models.Todo{}, err
 	}
 
-	fmt.Println("Endpoint Hit: createNewTodo")
 	for _, todo := range service.Todos {
 		if todo.Id == newTodo.Id {
 			return models.Todo{}, errors.New(fmt.Sprintf("Todo with id [%s] already exists", newTodo.Id))
@@ -56,7 +55,6 @@ func (service *TodoService) CreateNewTodo(newTodo models.Todo) (models.Todo, err
 
 // DeleteTodo removes a Todo item from the DB with an id matching that of the id provided as a parameter
 func (service *TodoService) DeleteTodo(id string) {
-	fmt.Println("Endpoint Hit: deleteTodo")
 	for i, todo := range service.Todos {
 		if todo.Id == id {
 			//Todos equals all values before index (remember slices don't include value at the max index specified)
@@ -76,7 +74,6 @@ func (service *TodoService) UpdateTodo(newTodo models.Todo) (models.Todo, error)
 	if err != nil {
 		return models.Todo{}, err
 	}
-	fmt.Println("Endpoint Hit: updateTodo")
 	for i, todo := range service.Todos {
 		if todo.Id == newTodo.Id {
 			service.Todos[i] = newTodo
