@@ -181,3 +181,43 @@ func TestCreateNewTodoNewTodoSuccessfullyCreated(t *testing.T) {
 		t.Error("expected todo:", newTodo, "but received todo:", actualNewTodo)
 	}
 }
+
+func TestDeleteTodoSuccessfulDeletion(t *testing.T) {
+	setupTest(t)
+	expectedTodo := models.Todo{
+		Id:        "1",
+		Title:     "Example Title",
+		Desc:      "Example Description",
+		Completed: false,
+	}
+	todoService.Todos = append(todoService.Todos, expectedTodo)
+	todoService.DeleteTodo("1")
+	if len(todoService.Todos) != 0 {
+		t.Error("expected array of length", 0, "but received array of length", len(todoService.Todos))
+	}
+}
+
+func TestDeleteTodoSuccessfulDeletionDoesntDeleteNonMatchingTodos(t *testing.T) {
+	setupTest(t)
+	expectedTodo1 := models.Todo{
+		Id:        "1",
+		Title:     "Example Title",
+		Desc:      "Example Description",
+		Completed: false,
+	}
+	expectedTodo2 := models.Todo{
+		Id:        "2",
+		Title:     "Example Title",
+		Desc:      "Example Description",
+		Completed: false,
+	}
+	todoService.Todos = append(todoService.Todos, []models.Todo{expectedTodo1, expectedTodo2}...)
+
+	todoService.DeleteTodo("1")
+	if len(todoService.Todos) != 1 {
+		t.Error("expected array of length", 1, "but received array of length", len(todoService.Todos))
+	}
+	if todoService.Todos[0] != expectedTodo2 {
+		t.Error("expected todo:", expectedTodo2, "but received todo:", todoService.Todos[0])
+	}
+}
