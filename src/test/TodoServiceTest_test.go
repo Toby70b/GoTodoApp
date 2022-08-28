@@ -221,3 +221,67 @@ func TestDeleteTodoSuccessfulDeletionDoesntDeleteNonMatchingTodos(t *testing.T) 
 		t.Error("expected todo:", expectedTodo2, "but received todo:", todoService.Todos[0])
 	}
 }
+
+func TestUpdateTodoValidationError(t *testing.T) {
+	setupTest(t)
+	newTodo := models.Todo{
+		Id:        "1",
+		Title:     "Example Title",
+		Desc:      "Example Description",
+		Completed: false,
+	}
+	UpdatedTodo := models.Todo{
+		Title:     "Updated Example Title",
+		Desc:      "Updated Example Description",
+		Completed: true,
+	}
+	todoService.Todos = append(todoService.Todos, newTodo)
+	_, err := todoService.UpdateTodo(UpdatedTodo)
+	if err == nil {
+		t.Error("expected error but no error returned")
+	}
+	if err.Error() != "todo Id cannot be null" {
+		t.Error("expected error message was not found, instead was:", err.Error())
+	}
+}
+
+func TestUpdateTodoNoTodoFound(t *testing.T) {
+	setupTest(t)
+	UpdatedTodo := models.Todo{
+		Id:        "1",
+		Title:     "Updated Example Title",
+		Desc:      "Updated Example Description",
+		Completed: true,
+	}
+	_, err := todoService.UpdateTodo(UpdatedTodo)
+	if err == nil {
+		t.Error("expected error but no error returned")
+	}
+	if err.Error() != "could not find todo with id [1]" {
+		t.Error("expected error message was not found, instead was:", err.Error())
+	}
+}
+
+func TestUpdateTodoSuccessfully(t *testing.T) {
+	setupTest(t)
+	newTodo := models.Todo{
+		Id:        "1",
+		Title:     "Example Title",
+		Desc:      "Example Description",
+		Completed: false,
+	}
+	UpdatedTodo := models.Todo{
+		Id:        "1",
+		Title:     "Updated Example Title",
+		Desc:      "Updated Example Description",
+		Completed: true,
+	}
+	todoService.Todos = append(todoService.Todos, newTodo)
+	_, err := todoService.UpdateTodo(UpdatedTodo)
+	if err != nil {
+		t.Error("expected no error but error returned")
+	}
+	if todoService.Todos[0] != UpdatedTodo {
+		t.Error("expected todo:", UpdatedTodo, "but received todo:", todoService.Todos[0])
+	}
+}
