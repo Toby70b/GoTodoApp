@@ -1,6 +1,6 @@
 package models
 
-// a Todo item. Composed of the following fields:
+// Todo a Todo item. Composed of the following fields:
 //
 // Id: A unique identifier of the todo item
 //
