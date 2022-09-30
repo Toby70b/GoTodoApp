@@ -6,27 +6,36 @@ import (
 	"fmt"
 )
 
-// A TodoService represents a Service class responsible for functionality relating to Todo items
+type TodoService interface {
+	ReturnAllTodos() []models.Todo
+	ReturnSingleTodo(id string) (models.Todo, error)
+	CreateNewTodo(newTodo models.Todo) (models.Todo, error)
+	DeleteTodo(id string)
+	UpdateTodo(newTodo models.Todo) (models.Todo, error)
+}
+
+// A TodoServiceImpl represents a Service class responsible for functionality relating to Todo items
 //
 // Contains an array Todos which acts as a in-memory DB for persisting Todo items
-type TodoService struct {
+type TodoServiceImpl struct {
 	Todos []models.Todo
 }
 
-// NewTodoService creates a new TodoController object. This is used by Wire when starting the API to perform the
+// NewTodoServiceImpl creates a new TodoServiceImpl object. This is used by Wire when starting the API to perform the
 // necessary dependency injection
-func NewTodoService(todos []models.Todo) TodoService {
-	return TodoService{todos}
+func NewTodoServiceImpl(todos []models.Todo) *TodoServiceImpl {
+	var b = TodoServiceImpl{todos}
+	return &b
 }
 
 // ReturnAllTodos returns all Todo items currently persisted within the DB
-func (service *TodoService) ReturnAllTodos() []models.Todo {
+func (service *TodoServiceImpl) ReturnAllTodos() []models.Todo {
 	return service.Todos
 }
 
 // ReturnSingleTodo returns a single Todo item, identified via the id param. If no Todo item is found with a matching
 // Id then an error is returned
-func (service *TodoService) ReturnSingleTodo(id string) (models.Todo, error) {
+func (service *TodoServiceImpl) ReturnSingleTodo(id string) (models.Todo, error) {
 	for _, todo := range service.Todos {
 		if todo.Id == id {
 			return todo, nil
@@ -38,7 +47,7 @@ func (service *TodoService) ReturnSingleTodo(id string) (models.Todo, error) {
 // CreateNewTodo persists a new Todo item in the DB. If a existing Todo item with an id matching that of the new Todo item
 // is found within the DB then an error will be returned
 // The Todo item passed as a parameter must include an id
-func (service *TodoService) CreateNewTodo(newTodo models.Todo) (models.Todo, error) {
+func (service *TodoServiceImpl) CreateNewTodo(newTodo models.Todo) (models.Todo, error) {
 	err := validateTodo(newTodo)
 	if err != nil {
 		return models.Todo{}, err
@@ -54,7 +63,7 @@ func (service *TodoService) CreateNewTodo(newTodo models.Todo) (models.Todo, err
 }
 
 // DeleteTodo removes a Todo item from the DB with an id matching that of the id provided as a parameter
-func (service *TodoService) DeleteTodo(id string) {
+func (service *TodoServiceImpl) DeleteTodo(id string) {
 	for i, todo := range service.Todos {
 		if todo.Id == id {
 			//Todos equals all values before index (remember slices don't include value at the max index specified)
@@ -69,7 +78,7 @@ func (service *TodoService) DeleteTodo(id string) {
 // an id matching that of the Todo item passed as a parameter cannot be found then an error will be returned.
 //
 // The Todo item passed as a parameter must include an id
-func (service *TodoService) UpdateTodo(newTodo models.Todo) (models.Todo, error) {
+func (service TodoServiceImpl) UpdateTodo(newTodo models.Todo) (models.Todo, error) {
 	err := validateTodo(newTodo)
 	if err != nil {
 		return models.Todo{}, err

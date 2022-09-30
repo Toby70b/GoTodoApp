@@ -7,16 +7,16 @@ import (
 	"testing"
 )
 
-var todoService services.TodoService
+var todoService *services.TodoServiceImpl
 
-func setupTest(tb *testing.T) {
+func setupTest() {
 	log.Println("setup test")
 	var todos []models.Todo
-	todoService = services.NewTodoService(todos)
+	todoService = services.NewTodoServiceImpl(todos)
 }
 
 func TestReturnAllTodosNoTodoFound(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	actualTodos := todoService.ReturnAllTodos()
 	if len(actualTodos) != 0 {
 		t.Error("expected array of length", 0, "but received array of length", len(actualTodos))
@@ -24,7 +24,7 @@ func TestReturnAllTodosNoTodoFound(t *testing.T) {
 }
 
 func TestReturnAllTodosOneTodoFound(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	expectedTodo := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
@@ -44,7 +44,7 @@ func TestReturnAllTodosOneTodoFound(t *testing.T) {
 }
 
 func TestReturnAllTodosMultipleTodosFound(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	expectedTodo1 := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
@@ -74,7 +74,7 @@ func TestReturnAllTodosMultipleTodosFound(t *testing.T) {
 }
 
 func TestReturnSingleTodoNoTodoFoundEmptyArray(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	actualTodo, _ := todoService.ReturnSingleTodo("1")
 	if actualTodo != (models.Todo{Completed: false}) {
 		t.Error("expected Todo to be empty, instead was:", actualTodo)
@@ -82,7 +82,7 @@ func TestReturnSingleTodoNoTodoFoundEmptyArray(t *testing.T) {
 }
 
 func TestReturnSingleTodoNoTodoFoundReturnError(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	_, err := todoService.ReturnSingleTodo("1")
 	if err == nil {
 		t.Error("expected error but no error returned")
@@ -93,7 +93,7 @@ func TestReturnSingleTodoNoTodoFoundReturnError(t *testing.T) {
 }
 
 func TestReturnSingleTodoNoTodoFoundWrongId(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	expectedTodo := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
@@ -108,7 +108,7 @@ func TestReturnSingleTodoNoTodoFoundWrongId(t *testing.T) {
 }
 
 func TestReturnSingleTodoTodoFound(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	expectedTodo := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
@@ -123,7 +123,7 @@ func TestReturnSingleTodoTodoFound(t *testing.T) {
 }
 
 func TestCreateNewTodoValidationError(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	newTodo := models.Todo{
 		Title:     "Example Title",
 		Desc:      "Example Description",
@@ -142,7 +142,7 @@ func TestCreateNewTodoValidationError(t *testing.T) {
 }
 
 func TestCreateNewTodoDuplicateIdError(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	newTodo := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
@@ -163,7 +163,7 @@ func TestCreateNewTodoDuplicateIdError(t *testing.T) {
 }
 
 func TestCreateNewTodoNewTodoSuccessfullyCreated(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	newTodo := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
@@ -183,7 +183,7 @@ func TestCreateNewTodoNewTodoSuccessfullyCreated(t *testing.T) {
 }
 
 func TestDeleteTodoSuccessfulDeletion(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	expectedTodo := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
@@ -198,7 +198,7 @@ func TestDeleteTodoSuccessfulDeletion(t *testing.T) {
 }
 
 func TestDeleteTodoSuccessfulDeletionDoesntDeleteNonMatchingTodos(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	expectedTodo1 := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
@@ -223,7 +223,7 @@ func TestDeleteTodoSuccessfulDeletionDoesntDeleteNonMatchingTodos(t *testing.T) 
 }
 
 func TestUpdateTodoValidationError(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	newTodo := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
@@ -246,7 +246,7 @@ func TestUpdateTodoValidationError(t *testing.T) {
 }
 
 func TestUpdateTodoNoTodoFound(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	UpdatedTodo := models.Todo{
 		Id:        "1",
 		Title:     "Updated Example Title",
@@ -263,7 +263,7 @@ func TestUpdateTodoNoTodoFound(t *testing.T) {
 }
 
 func TestUpdateTodoSuccessfully(t *testing.T) {
-	setupTest(t)
+	setupTest()
 	newTodo := models.Todo{
 		Id:        "1",
 		Title:     "Example Title",
