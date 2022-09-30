@@ -3,6 +3,8 @@ package controllers
 import (
 	"TodoApp/src/main/models"
 	"encoding/json"
+	"errors"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -27,7 +29,7 @@ func (service MockTodoServiceImpl) ReturnAllTodos() []models.Todo {
 
 func (service MockTodoServiceImpl) ReturnSingleTodo(id string) (models.Todo, error) {
 	args := service.Called()
-	return args.Get(0).(models.Todo), nil
+	return args.Get(0).(models.Todo), args.Get(1).(error)
 }
 
 func (service MockTodoServiceImpl) CreateNewTodo(newTodo models.Todo) (models.Todo, error) {
@@ -168,4 +170,29 @@ func TestReturnSingleTodoTodoFound(t *testing.T) {
 	}
 	expectedResponse, _ := json.Marshal(mockTodo)
 	require.JSONEq(t, string(expectedResponse), string(data))
+}
+
+func TestReturnSingleTodoTodoNotFound(t *testing.T) {
+	testObj := new(MockTodoServiceImpl)
+	testObj.On("ReturnSingleTodo").Return(models.Todo{}, errors.New("could not find todo with id [999]"))
+	setupTodoController(testObj)
+	req := httptest.NewRequest(http.MethodGet, "/999", nil)
+	reqPathParams := map[string]string{
+		"id": "999",
+	}
+	req = mux.SetURLVars(req, reqPathParams)
+	httpWriter := httptest.NewRecorder()
+
+	todoController.ReturnSingleTodo(httpWriter, req)
+	res := httpWriter.Result()
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+	if httpWriter.Code != http.StatusNotFound {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusNotFound, httpWriter.Code)
+	}
+	var expectedResponse = "\"could not find todo with id [999]\""
+	require.JSONEq(t, expectedResponse, string(data))
 }
