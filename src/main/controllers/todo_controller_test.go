@@ -1,7 +1,6 @@
-package test
+package controllers
 
 import (
-	"TodoApp/src/main/controllers"
 	"TodoApp/src/main/models"
 	"encoding/json"
 	"github.com/stretchr/testify/mock"
@@ -14,7 +13,7 @@ import (
 )
 
 // TODO look at test tables
-var todoController controllers.TodoController
+var todoController TodoController
 
 type MockTodoServiceImpl struct {
 	mock.Mock
@@ -27,8 +26,8 @@ func (service MockTodoServiceImpl) ReturnAllTodos() []models.Todo {
 }
 
 func (service MockTodoServiceImpl) ReturnSingleTodo(id string) (models.Todo, error) {
-	//TODO implement me
-	panic("implement me")
+	args := service.Called()
+	return args.Get(0).(models.Todo), nil
 }
 
 func (service MockTodoServiceImpl) CreateNewTodo(newTodo models.Todo) (models.Todo, error) {
@@ -48,7 +47,7 @@ func (service MockTodoServiceImpl) UpdateTodo(newTodo models.Todo) (models.Todo,
 
 func setupTodoController(service *MockTodoServiceImpl) {
 	log.Println("setup test")
-	todoController = controllers.NewTodoController(service)
+	todoController = NewTodoController(service)
 }
 
 func TestReturnAllTodosSingleTodo(t *testing.T) {
@@ -63,15 +62,20 @@ func TestReturnAllTodosSingleTodo(t *testing.T) {
 
 	setupTodoController(testObj)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
+	httpWriter := httptest.NewRecorder()
 
-	todoController.ReturnAllTodos(w, req)
-	res := w.Result()
+	todoController.ReturnAllTodos(httpWriter, req)
+	res := httpWriter.Result()
 	defer res.Body.Close()
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Errorf("error when reading HTTP response: [%v]", err)
 	}
+
+	if httpWriter.Code != http.StatusOK {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
+	}
+
 	expectedResponse, _ := json.Marshal([]models.Todo{mockTodo})
 	require.JSONEq(t, string(expectedResponse), string(data))
 }
@@ -101,14 +105,17 @@ func TestReturnAllTodosMultipleTodos(t *testing.T) {
 
 	setupTodoController(testObj)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
+	httpWriter := httptest.NewRecorder()
 
-	todoController.ReturnAllTodos(w, req)
-	res := w.Result()
+	todoController.ReturnAllTodos(httpWriter, req)
+	res := httpWriter.Result()
 	defer res.Body.Close()
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+	if httpWriter.Code != http.StatusOK {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
 	}
 	expectedResponse, _ := json.Marshal(mockTodos)
 	require.JSONEq(t, string(expectedResponse), string(data))
@@ -120,15 +127,45 @@ func TestReturnAllTodosMultipleNilTodo(t *testing.T) {
 
 	setupTodoController(testObj)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
+	httpWriter := httptest.NewRecorder()
 
-	todoController.ReturnAllTodos(w, req)
-	res := w.Result()
+	todoController.ReturnAllTodos(httpWriter, req)
+	res := httpWriter.Result()
 	defer res.Body.Close()
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Errorf("error when reading HTTP response: [%v]", err)
 	}
+	if httpWriter.Code != http.StatusOK {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
+	}
 	expectedResponse, _ := json.Marshal([]models.Todo{})
+	require.JSONEq(t, string(expectedResponse), string(data))
+}
+
+func TestReturnSingleTodoTodoFound(t *testing.T) {
+	testObj := new(MockTodoServiceImpl)
+	var mockTodo = models.Todo{
+		Id:        "1",
+		Title:     "Bake cake",
+		Desc:      "Bake a carrot cake for tomorrow's fate",
+		Completed: false,
+	}
+	testObj.On("ReturnSingleTodo").Return(mockTodo)
+	setupTodoController(testObj)
+	req := httptest.NewRequest(http.MethodGet, "/1", nil)
+	httpWriter := httptest.NewRecorder()
+
+	todoController.ReturnSingleTodo(httpWriter, req)
+	res := httpWriter.Result()
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+	if httpWriter.Code != http.StatusOK {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
+	}
+	expectedResponse, _ := json.Marshal(mockTodo)
 	require.JSONEq(t, string(expectedResponse), string(data))
 }

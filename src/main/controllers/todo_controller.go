@@ -24,7 +24,7 @@ func NewTodoController(todoService services.TodoService) TodoController {
 }
 
 // returnAllTodos returns all todos items persisted within the DB
-func (controller *TodoController) ReturnAllTodos(writer http.ResponseWriter, request *http.Request) {
+func (controller *TodoController) ReturnAllTodos(writer http.ResponseWriter, _ *http.Request) {
 	fmt.Println("Endpoint Hit: returnAllTodos")
 	todos := controller.todoService.ReturnAllTodos()
 	utils.ReturnJsonResponse(writer, http.StatusOK, todos)

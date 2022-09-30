@@ -1,18 +1,17 @@
-package test
+package services
 
 import (
 	"TodoApp/src/main/models"
-	"TodoApp/src/main/services"
 	"log"
 	"testing"
 )
 
-var todoService *services.TodoServiceImpl
+var todoService *TodoServiceImpl
 
 func setupTest() {
 	log.Println("setup test")
 	var todos []models.Todo
-	todoService = services.NewTodoServiceImpl(todos)
+	todoService = NewTodoServiceImpl(todos)
 }
 
 func TestReturnAllTodosNoTodoFound(t *testing.T) {
