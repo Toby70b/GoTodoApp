@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-// TODO look at test tables
+// TODO attempt to refactor the below into table tests
 var todoController TodoController
 
 type MockTodoServiceImpl struct {
@@ -28,7 +28,10 @@ func (service MockTodoServiceImpl) ReturnAllTodos() []models.Todo {
 }
 
 func (service MockTodoServiceImpl) ReturnSingleTodo(id string) (models.Todo, error) {
-	args := service.Called()
+	args := service.Called(id)
+	if args.Error(1) == nil {
+		return args.Get(0).(models.Todo), nil
+	}
 	return args.Get(0).(models.Todo), args.Get(1).(error)
 }
 
@@ -153,9 +156,13 @@ func TestReturnSingleTodoTodoFound(t *testing.T) {
 		Desc:      "Bake a carrot cake for tomorrow's fate",
 		Completed: false,
 	}
-	testObj.On("ReturnSingleTodo").Return(mockTodo)
+	testObj.On("ReturnSingleTodo", "1").Return(mockTodo, nil)
 	setupTodoController(testObj)
 	req := httptest.NewRequest(http.MethodGet, "/1", nil)
+	reqPathParams := map[string]string{
+		"id": "1",
+	}
+	req = mux.SetURLVars(req, reqPathParams)
 	httpWriter := httptest.NewRecorder()
 
 	todoController.ReturnSingleTodo(httpWriter, req)
@@ -174,7 +181,7 @@ func TestReturnSingleTodoTodoFound(t *testing.T) {
 
 func TestReturnSingleTodoTodoNotFound(t *testing.T) {
 	testObj := new(MockTodoServiceImpl)
-	testObj.On("ReturnSingleTodo").Return(models.Todo{}, errors.New("could not find todo with id [999]"))
+	testObj.On("ReturnSingleTodo", "999").Return(models.Todo{}, errors.New("could not find todo with id [999]"))
 	setupTodoController(testObj)
 	req := httptest.NewRequest(http.MethodGet, "/999", nil)
 	reqPathParams := map[string]string{
