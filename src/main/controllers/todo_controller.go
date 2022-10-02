@@ -93,11 +93,17 @@ func (controller *TodoController) UpdateTodo(writer http.ResponseWriter, request
 	}
 	response, err := controller.todoService.UpdateTodo(todo)
 	if err != nil {
-		utils.ReturnJsonResponse(writer, http.StatusNotFound, err.Error())
+		log.Printf("Failed to find existing todo item with id [%v] attempting to create new todo item\n", todo.Id)
+		response, err := controller.todoService.CreateNewTodo(todo)
+		if err != nil {
+			log.Println(err.Error())
+			utils.ReturnJsonResponse(writer, http.StatusConflict, fmt.Sprintf("Todo with id [%s] already exists", todo.Id))
+		} else {
+			utils.ReturnJsonResponse(writer, http.StatusCreated, response)
+		}
 	} else {
 		utils.ReturnJsonResponse(writer, http.StatusOK, response)
 	}
-
 }
 
 // HandleRequests initializes a new MUX router to receive requests under the "todo/" URI and handles them by calling
