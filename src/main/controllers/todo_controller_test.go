@@ -16,6 +16,7 @@ import (
 )
 
 // TODO attempt to refactor the below into table tests
+// TODO can setup be done before each test without explicitly putting it in each function?
 var todoController TodoController
 
 type MockTodoServiceImpl struct {
@@ -45,13 +46,15 @@ func (service MockTodoServiceImpl) CreateNewTodo(newTodo models.Todo) (models.To
 }
 
 func (service MockTodoServiceImpl) DeleteTodo(id string) {
-	//TODO implement me
-	panic("implement me")
+	return
 }
 
 func (service MockTodoServiceImpl) UpdateTodo(newTodo models.Todo) (models.Todo, error) {
-	//TODO implement me
-	panic("implement me")
+	args := service.Called(newTodo)
+	if args.Error(1) == nil {
+		return args.Get(0).(models.Todo), nil
+	}
+	return args.Get(0).(models.Todo), args.Get(1).(error)
 }
 
 func setupTodoController(service *MockTodoServiceImpl) {
@@ -285,5 +288,147 @@ func TestCreateNewTodoTodoWithDuplicateIdAlreadyExists(t *testing.T) {
 	}
 	var expectedResponse = "\"Todo with id [1] already exists\""
 	require.JSONEq(t, expectedResponse, string(data))
+}
 
+func TestDeleteTodo(t *testing.T) {
+	testObj := new(MockTodoServiceImpl)
+	testObj.On("DeleteTodo", "1").Return()
+	setupTodoController(testObj)
+	reqPathParams := map[string]string{
+		"id": "1",
+	}
+	req := httptest.NewRequest(http.MethodDelete, "/1", nil)
+	req = mux.SetURLVars(req, reqPathParams)
+	httpWriter := httptest.NewRecorder()
+	todoController.DeleteTodo(httpWriter, req)
+	res := httpWriter.Result()
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+	if httpWriter.Code != http.StatusOK {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
+	}
+	var expectedResponse = "\"Todo Deleted Successfully\""
+	require.JSONEq(t, expectedResponse, string(data))
+}
+
+func TestUpdateTodoTodoUpdatedSuccessfully(t *testing.T) {
+	testObj := new(MockTodoServiceImpl)
+	var mockUpdatedTodo = models.Todo{
+		Id:        "1",
+		Title:     "Bake cake",
+		Desc:      "Bake a lemon cake for tomorrow's fate",
+		Completed: true,
+	}
+	testObj.On("UpdateTodo", mockUpdatedTodo).Return(mockUpdatedTodo, nil)
+	setupTodoController(testObj)
+	mockTodoJson, _ := json.Marshal(mockUpdatedTodo)
+	bodyReader := strings.NewReader(string(mockTodoJson))
+	req := httptest.NewRequest(http.MethodPut, "/1", bodyReader)
+	reqPathParams := map[string]string{
+		"id": "1",
+	}
+	req = mux.SetURLVars(req, reqPathParams)
+	httpWriter := httptest.NewRecorder()
+	todoController.UpdateTodo(httpWriter, req)
+	res := httpWriter.Result()
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+	if httpWriter.Code != http.StatusOK {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
+	}
+	expectedResponse, _ := json.Marshal(mockUpdatedTodo)
+	require.JSONEq(t, string(expectedResponse), string(data))
+}
+
+func TestUpdateTodoInvalidRequestBody(t *testing.T) {
+	testObj := new(MockTodoServiceImpl)
+
+	setupTodoController(testObj)
+	bodyReader := strings.NewReader("{invalid:jsonsjs}}")
+	req := httptest.NewRequest(http.MethodPatch, "/", bodyReader)
+	httpWriter := httptest.NewRecorder()
+	todoController.UpdateTodo(httpWriter, req)
+	res := httpWriter.Result()
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+	if httpWriter.Code != http.StatusInternalServerError {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusInternalServerError, httpWriter.Code)
+	}
+	var expectedResponse = "\"Internal Server Error\""
+	require.JSONEq(t, expectedResponse, string(data))
+}
+
+func TestUpdateTodoTodoNotFoundCreatedSuccessfully(t *testing.T) {
+	testObj := new(MockTodoServiceImpl)
+	var mockUpdatedTodo = models.Todo{
+		Id:        "1",
+		Title:     "Bake cake",
+		Desc:      "Bake a lemon cake for tomorrow's fate",
+		Completed: true,
+	}
+	testObj.On("UpdateTodo", mockUpdatedTodo).Return(models.Todo{}, errors.New("could not find todo with id [1]"))
+	testObj.On("CreateNewTodo", mockUpdatedTodo).Return(mockUpdatedTodo, nil)
+	setupTodoController(testObj)
+	mockTodoJson, _ := json.Marshal(mockUpdatedTodo)
+	bodyReader := strings.NewReader(string(mockTodoJson))
+	req := httptest.NewRequest(http.MethodPut, "/1", bodyReader)
+	reqPathParams := map[string]string{
+		"id": "1",
+	}
+	req = mux.SetURLVars(req, reqPathParams)
+	httpWriter := httptest.NewRecorder()
+	todoController.UpdateTodo(httpWriter, req)
+	res := httpWriter.Result()
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+	if httpWriter.Code != http.StatusCreated {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusCreated, httpWriter.Code)
+	}
+	expectedResponse, _ := json.Marshal(mockUpdatedTodo)
+	require.JSONEq(t, string(expectedResponse), string(data))
+}
+
+func TestUpdateTodoTodoNotFoundCreatedUnSuccessfullyDueToDuplicateId(t *testing.T) {
+	testObj := new(MockTodoServiceImpl)
+	var mockUpdatedTodo = models.Todo{
+		Id:        "1",
+		Title:     "Bake cake",
+		Desc:      "Bake a lemon cake for tomorrow's fate",
+		Completed: true,
+	}
+	testObj.On("UpdateTodo", mockUpdatedTodo).Return(models.Todo{}, errors.New("could not find todo with id [1]"))
+	testObj.On("CreateNewTodo", mockUpdatedTodo).Return(models.Todo{}, errors.New("todo with id [1] already exists"))
+	setupTodoController(testObj)
+	mockTodoJson, _ := json.Marshal(mockUpdatedTodo)
+	bodyReader := strings.NewReader(string(mockTodoJson))
+	req := httptest.NewRequest(http.MethodPut, "/1", bodyReader)
+	reqPathParams := map[string]string{
+		"id": "1",
+	}
+	req = mux.SetURLVars(req, reqPathParams)
+	httpWriter := httptest.NewRecorder()
+	todoController.UpdateTodo(httpWriter, req)
+	res := httpWriter.Result()
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+	if httpWriter.Code != http.StatusConflict {
+		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusConflict, httpWriter.Code)
+	}
+	var expectedResponse = "\"Todo with id [1] already exists\""
+	require.JSONEq(t, expectedResponse, string(data))
 }
