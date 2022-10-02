@@ -153,7 +153,7 @@ func TestCreateNewTodoDuplicateIdError(t *testing.T) {
 	if err == nil {
 		t.Error("expected error but no error returned")
 	}
-	if err.Error() != "Todo with id [1] already exists" {
+	if err.Error() != "todo with id [1] already exists" {
 		t.Error("expected error message was not found, instead was:", err.Error())
 	}
 	if len(todoService.Todos) != 1 {
