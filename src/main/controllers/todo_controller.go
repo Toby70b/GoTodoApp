@@ -57,14 +57,15 @@ func (controller *TodoController) CreateNewTodo(writer http.ResponseWriter, requ
 	err := json.Unmarshal(reqBody, &todo)
 	if err != nil {
 		log.Println("Error deserializing the request", err)
-		http.Error(writer, "Internal Server Error", 500)
+		utils.ReturnJsonResponse(writer, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 	response, err := controller.todoService.CreateNewTodo(todo)
 	if err != nil {
-		utils.ReturnJsonResponse(writer, http.StatusConflict, err.Error())
+		log.Println(err.Error())
+		utils.ReturnJsonResponse(writer, http.StatusConflict, fmt.Sprintf("Todo with id [%s] already exists", todo.Id))
 	} else {
 		utils.ReturnJsonResponse(writer, http.StatusCreated, response)
-
 	}
 }
 
@@ -87,7 +88,8 @@ func (controller *TodoController) UpdateTodo(writer http.ResponseWriter, request
 	err := json.Unmarshal(reqBody, &todo)
 	if err != nil {
 		log.Println("Error deserializing the request", err)
-		http.Error(writer, "Internal Server Error", 500)
+		utils.ReturnJsonResponse(writer, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 	response, err := controller.todoService.UpdateTodo(todo)
 	if err != nil {

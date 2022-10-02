@@ -55,7 +55,7 @@ func (service *TodoServiceImpl) CreateNewTodo(newTodo models.Todo) (models.Todo,
 
 	for _, todo := range service.Todos {
 		if todo.Id == newTodo.Id {
-			return models.Todo{}, errors.New(fmt.Sprintf("Todo with id [%s] already exists", newTodo.Id))
+			return models.Todo{}, errors.New(fmt.Sprintf("todo with id [%s] already exists", newTodo.Id))
 		}
 	}
 	service.Todos = append(service.Todos, newTodo)
