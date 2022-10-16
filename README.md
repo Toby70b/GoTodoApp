@@ -1,6 +1,6 @@
 # GoTodoApp
 
-This is just a simple REST API made in GO which I used to practice writing in GO, and understanding how dependency injection can be done within GO.
+This is just a simple REST API made in Go which I used to practice writing in Go, and understanding how dependency injection can be done within Go.
 
 ## API spec
 
