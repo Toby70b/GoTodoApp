@@ -2,73 +2,59 @@ package services
 
 import (
 	"TodoApp/src/main/models"
-	"log"
+	"github.com/google/go-cmp/cmp"
 	"testing"
 )
 
 var todoService *TodoServiceImpl
 
 func setupTest() {
-	log.Println("setup test")
-	var todos []models.Todo
-	todoService = NewTodoServiceImpl(todos)
+	todoService = NewTodoServiceImpl([]models.Todo{})
 }
 
-func TestReturnAllTodosNoTodoFound(t *testing.T) {
-	setupTest()
-	actualTodos := todoService.ReturnAllTodos()
-	if len(actualTodos) != 0 {
-		t.Error("expected array of length", 0, "but received array of length", len(actualTodos))
-	}
-}
-
-func TestReturnAllTodosOneTodoFound(t *testing.T) {
-	setupTest()
-	expectedTodo := models.Todo{
-		Id:        "1",
-		Title:     "Example Title",
-		Desc:      "Example Description",
-		Completed: false,
-	}
-
-	todoService.Todos = append(todoService.Todos, expectedTodo)
-
-	actualTodos := todoService.ReturnAllTodos()
-	if len(actualTodos) != 1 {
-		t.Error("expected array of length", 1, "but received array of length", len(actualTodos))
-	}
-	if actualTodos[0] != expectedTodo {
-		t.Error("expected todo:", expectedTodo, "but received todo:", actualTodos[0])
-	}
-}
-
-func TestReturnAllTodosMultipleTodosFound(t *testing.T) {
-	setupTest()
-	expectedTodo1 := models.Todo{
-		Id:        "1",
-		Title:     "Example Title",
-		Desc:      "Example Description",
-		Completed: false,
+func TestReturnAllTodos(t *testing.T) {
+	tests := map[string]struct {
+		input    []models.Todo
+		expected []models.Todo
+	}{
+		"Return No Todos": {
+			input:    []models.Todo{},
+			expected: []models.Todo{},
+		},
+		"Return Single Todo": {
+			input:    []models.Todo{{Id: "1", Title: "Example Title", Desc: "Example Description", Completed: false}},
+			expected: []models.Todo{{Id: "1", Title: "Example Title", Desc: "Example Description", Completed: false}},
+		},
+		"Return Multiple Todos": {
+			input: []models.Todo{
+				{
+					Id: "1", Title: "Example Title", Desc: "Example Description", Completed: false,
+				},
+				{
+					Id: "2", Title: "Example Title 2", Desc: "Example Description", Completed: false,
+				},
+			},
+			expected: []models.Todo{
+				{
+					Id: "1", Title: "Example Title", Desc: "Example Description", Completed: false,
+				},
+				{
+					Id: "2", Title: "Example Title 2", Desc: "Example Description", Completed: false,
+				},
+			},
+		},
 	}
 
-	expectedTodo2 := models.Todo{
-		Id:        "2",
-		Title:     "Example Title 2",
-		Desc:      "Example Description ",
-		Completed: false,
-	}
-
-	todoService.Todos = append(todoService.Todos, []models.Todo{expectedTodo1, expectedTodo2}...)
-
-	actualTodos := todoService.ReturnAllTodos()
-	if len(actualTodos) != 2 {
-		t.Error("expected array of length", 2, "but received array of length", len(actualTodos))
-	}
-	if actualTodos[0] != expectedTodo1 {
-		t.Error("expected todo:", expectedTodo1, "but received todo:", actualTodos[0])
-	}
-	if actualTodos[1] != expectedTodo2 {
-		t.Error("expected todo:", expectedTodo2, "but received todo:", actualTodos[1])
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			setupTest()
+			todoService.Todos = append(todoService.Todos, tt.input...)
+			actual := todoService.ReturnAllTodos()
+			diff := cmp.Diff(tt.expected, actual)
+			if diff != "" {
+				t.Fatalf(diff)
+			}
+		})
 	}
 }
 
