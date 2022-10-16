@@ -14,19 +14,19 @@ func setupTest() {
 
 func TestReturnAllTodos(t *testing.T) {
 	tests := map[string]struct {
-		input    []models.Todo
-		expected []models.Todo
+		prerequisite []models.Todo
+		expected     []models.Todo
 	}{
 		"Return No Todos": {
-			input:    []models.Todo{},
-			expected: []models.Todo{},
+			prerequisite: []models.Todo{},
+			expected:     []models.Todo{},
 		},
 		"Return Single Todo": {
-			input:    []models.Todo{{Id: "1", Title: "Example Title", Desc: "Example Description", Completed: false}},
-			expected: []models.Todo{{Id: "1", Title: "Example Title", Desc: "Example Description", Completed: false}},
+			prerequisite: []models.Todo{{Id: "1", Title: "Example Title", Desc: "Example Description", Completed: false}},
+			expected:     []models.Todo{{Id: "1", Title: "Example Title", Desc: "Example Description", Completed: false}},
 		},
 		"Return Multiple Todos": {
-			input: []models.Todo{
+			prerequisite: []models.Todo{
 				{
 					Id: "1", Title: "Example Title", Desc: "Example Description", Completed: false,
 				},
@@ -48,7 +48,7 @@ func TestReturnAllTodos(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			setupTest()
-			todoService.Todos = append(todoService.Todos, tt.input...)
+			todoService.Todos = append(todoService.Todos, tt.prerequisite...)
 			actual := todoService.ReturnAllTodos()
 			diff := cmp.Diff(tt.expected, actual)
 			if diff != "" {
@@ -58,52 +58,74 @@ func TestReturnAllTodos(t *testing.T) {
 	}
 }
 
-func TestReturnSingleTodoNoTodoFoundEmptyArray(t *testing.T) {
-	setupTest()
-	actualTodo, _ := todoService.ReturnSingleTodo("1")
-	if actualTodo != (models.Todo{Completed: false}) {
-		t.Error("expected Todo to be empty, instead was:", actualTodo)
+func TestReturnSingleTodo(t *testing.T) {
+	tests := map[string]struct {
+		prerequisite         []models.Todo
+		input                string
+		expected             models.Todo
+		errorExpected        bool
+		expectedErrorMessage string
+	}{
+		"No Todo Found Empty Array": {
+			prerequisite:         []models.Todo{},
+			input:                "1",
+			expected:             models.Todo{},
+			errorExpected:        true,
+			expectedErrorMessage: "could not find todo with id [1]",
+		},
+		"No Todo Found Wrong Id": {
+			prerequisite: []models.Todo{
+				{
+					Id:        "1",
+					Title:     "Example Title",
+					Desc:      "Example Description",
+					Completed: false,
+				},
+			},
+			input:                "2",
+			expected:             models.Todo{},
+			errorExpected:        true,
+			expectedErrorMessage: "could not find todo with id [2]",
+		},
+		"Todo With Matching Id Found": {
+			prerequisite: []models.Todo{
+				{
+					Id:        "1",
+					Title:     "Example Title",
+					Desc:      "Example Description",
+					Completed: false,
+				},
+			},
+			input: "1",
+			expected: models.Todo{
+				Id:        "1",
+				Title:     "Example Title",
+				Desc:      "Example Description",
+				Completed: false,
+			},
+			errorExpected: false,
+		},
 	}
-}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			setupTest()
+			todoService.Todos = append(todoService.Todos, tt.prerequisite...)
+			actual, err := todoService.ReturnSingleTodo(tt.input)
+			diff := cmp.Diff(tt.expected, actual)
+			if diff != "" {
+				t.Fatalf(diff)
+			}
+			if tt.errorExpected {
+				if err == nil {
+					t.Fatalf("Error expected but none occured")
+				} else if err.Error() != tt.expectedErrorMessage {
+					t.Fatalf("Error message not as expected, expected [%v] but was [%v]", tt.expectedErrorMessage, err.Error())
+				}
 
-func TestReturnSingleTodoNoTodoFoundReturnError(t *testing.T) {
-	setupTest()
-	_, err := todoService.ReturnSingleTodo("1")
-	if err == nil {
-		t.Error("expected error but no error returned")
-	}
-	if err.Error() != "could not find todo with id [1]" {
-		t.Error("expected error message was not found, instead was:", err.Error())
-	}
-}
-
-func TestReturnSingleTodoNoTodoFoundWrongId(t *testing.T) {
-	setupTest()
-	expectedTodo := models.Todo{
-		Id:        "1",
-		Title:     "Example Title",
-		Desc:      "Example Description",
-		Completed: false,
-	}
-	todoService.Todos = append(todoService.Todos, expectedTodo)
-	actualTodo, _ := todoService.ReturnSingleTodo("2")
-	if actualTodo != (models.Todo{Completed: false}) {
-		t.Error("expected Todo to be empty, instead was:", actualTodo)
-	}
-}
-
-func TestReturnSingleTodoTodoFound(t *testing.T) {
-	setupTest()
-	expectedTodo := models.Todo{
-		Id:        "1",
-		Title:     "Example Title",
-		Desc:      "Example Description",
-		Completed: false,
-	}
-	todoService.Todos = append(todoService.Todos, expectedTodo)
-	actualTodo, _ := todoService.ReturnSingleTodo("1")
-	if actualTodo != expectedTodo {
-		t.Error("expected todo:", expectedTodo, "but received todo:", actualTodo)
+			} else if !tt.errorExpected && err != nil {
+				t.Fatalf("Error occured when none expected: [%v]", err)
+			}
+		})
 	}
 }
 
