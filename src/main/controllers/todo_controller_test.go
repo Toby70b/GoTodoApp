@@ -8,15 +8,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 )
 
-// TODO attempt to refactor the below into table tests
-// TODO can setup be done before each test without explicitly putting it in each function?
 var todoController TodoController
 
 type MockTodoServiceImpl struct {
@@ -58,8 +55,88 @@ func (service MockTodoServiceImpl) UpdateTodo(newTodo models.Todo) (models.Todo,
 }
 
 func setupTodoController(service *MockTodoServiceImpl) {
-	log.Println("setup test")
 	todoController = NewTodoController(service)
+}
+
+func setupMock(mockService *mock.Mock, methodName string, mockResponse interface{}) {
+	mockService.On(methodName).Return(mockResponse)
+}
+
+func getHttpResponse(t *testing.T, res *http.Response) []byte {
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+
+	if err != nil {
+		t.Errorf("error when reading HTTP response: [%v]", err)
+	}
+	return data
+}
+
+func TestReturnAllTodos(t *testing.T) {
+
+	tests := map[string]struct {
+		expectedCode     int
+		expectedResponse []models.Todo
+		mockService      *MockTodoServiceImpl
+		mocks            []struct {
+			mockMethodName string
+			mockedResponse interface{}
+		}
+	}{
+		"Return Single Todo": {
+			expectedCode: 200,
+			mockService:  new(MockTodoServiceImpl),
+			expectedResponse: []models.Todo{
+				{
+					Id:        "1",
+					Title:     "Bake cake",
+					Desc:      "Bake a carrot cake for tomorrow's fate",
+					Completed: false,
+				},
+			},
+			mocks: []struct {
+				mockMethodName string
+				mockedResponse interface{}
+			}{
+				{
+					mockMethodName: "ReturnAllTodos",
+					mockedResponse: []models.Todo{
+						{
+							Id:        "1",
+							Title:     "Bake cake",
+							Desc:      "Bake a carrot cake for tomorrow's fate",
+							Completed: false,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			for _, mock := range tt.mocks {
+				setupMock(&tt.mockService.Mock, mock.mockMethodName, mock.mockedResponse)
+			}
+			setupTodoController(tt.mockService)
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			httpWriter := httptest.NewRecorder()
+
+			todoController.ReturnAllTodos(httpWriter, req)
+			res := httpWriter.Result()
+			defer res.Body.Close()
+			data := getHttpResponse(t, res)
+			if httpWriter.Code != tt.expectedCode {
+				t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", tt.expectedCode, httpWriter.Code)
+			}
+			expectedResponse, _ := json.Marshal(tt.expectedResponse)
+			require.JSONEq(t, string(expectedResponse), string(data))
+		})
+	}
+
 }
 
 func TestReturnAllTodosSingleTodo(t *testing.T) {
@@ -71,7 +148,6 @@ func TestReturnAllTodosSingleTodo(t *testing.T) {
 		Completed: false,
 	}
 	testObj.On("ReturnAllTodos").Return([]models.Todo{mockTodo})
-
 	setupTodoController(testObj)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	httpWriter := httptest.NewRecorder()
@@ -90,6 +166,10 @@ func TestReturnAllTodosSingleTodo(t *testing.T) {
 
 	expectedResponse, _ := json.Marshal([]models.Todo{mockTodo})
 	require.JSONEq(t, string(expectedResponse), string(data))
+}
+
+func funcName(testObj *MockTodoServiceImpl, mockTodo models.Todo) *mock.Call {
+	return testObj.On("ReturnAllTodos").Return([]models.Todo{mockTodo})
 }
 
 func TestReturnAllTodosMultipleTodos(t *testing.T) {
