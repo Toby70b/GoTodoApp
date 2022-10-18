@@ -58,8 +58,8 @@ func setupTodoController(service *MockTodoServiceImpl) {
 	todoController = NewTodoController(service)
 }
 
-func setupMock(mockService *mock.Mock, methodName string, mockResponse interface{}) {
-	mockService.On(methodName).Return(mockResponse)
+func setupMock(mockTodoService *mock.Mock, methodName string, mockResponse interface{}) {
+	mockTodoService.On(methodName).Return(mockResponse)
 }
 
 func getHttpResponse(t *testing.T, res *http.Response) []byte {
@@ -74,20 +74,25 @@ func getHttpResponse(t *testing.T, res *http.Response) []byte {
 	return data
 }
 
+type testMock struct {
+	mockedService      mock.Mock
+	serviceMockMethods []mockMethodDetails
+}
+
+type mockMethodDetails struct {
+	name         string
+	mockResponse interface{}
+}
+
 func TestReturnAllTodos(t *testing.T) {
 
 	tests := map[string]struct {
 		expectedCode     int
 		expectedResponse []models.Todo
-		mockService      *MockTodoServiceImpl
-		mocks            []struct {
-			mockMethodName string
-			mockedResponse interface{}
-		}
+		mockSetup        func(mockedComponent *MockTodoServiceImpl)
 	}{
 		"Return Single Todo": {
 			expectedCode: 200,
-			mockService:  new(MockTodoServiceImpl),
 			expectedResponse: []models.Todo{
 				{
 					Id:        "1",
@@ -96,31 +101,77 @@ func TestReturnAllTodos(t *testing.T) {
 					Completed: false,
 				},
 			},
-			mocks: []struct {
-				mockMethodName string
-				mockedResponse interface{}
-			}{
-				{
-					mockMethodName: "ReturnAllTodos",
-					mockedResponse: []models.Todo{
-						{
-							Id:        "1",
-							Title:     "Bake cake",
-							Desc:      "Bake a carrot cake for tomorrow's fate",
-							Completed: false,
-						},
+			mockSetup: func(mockedComponent *MockTodoServiceImpl) {
+				mockedComponent.On("ReturnAllTodos").Return([]models.Todo{
+					{
+						Id:        "1",
+						Title:     "Bake cake",
+						Desc:      "Bake a carrot cake for tomorrow's fate",
+						Completed: false,
 					},
+				})
+			},
+		},
+		"Return Multiple Todos": {
+			expectedCode: 200,
+			expectedResponse: []models.Todo{
+				{
+					Id:        "1",
+					Title:     "Bake cake",
+					Desc:      "Bake a carrot cake for tomorrow's fate",
+					Completed: false,
 				},
+				{
+					Id:        "2",
+					Title:     "Iron shirts",
+					Desc:      "Iron shirts that are in the dryer",
+					Completed: false,
+				},
+				{
+					Id:        "3",
+					Title:     "Walk dog",
+					Desc:      "Walk the dog around the town",
+					Completed: false,
+				},
+			},
+			mockSetup: func(mockedComponent *MockTodoServiceImpl) {
+				mockedComponent.On("ReturnAllTodos").Return([]models.Todo{
+					{
+						Id:        "1",
+						Title:     "Bake cake",
+						Desc:      "Bake a carrot cake for tomorrow's fate",
+						Completed: false,
+					},
+					{
+						Id:        "2",
+						Title:     "Iron shirts",
+						Desc:      "Iron shirts that are in the dryer",
+						Completed: false,
+					},
+					{
+						Id:        "3",
+						Title:     "Walk dog",
+						Desc:      "Walk the dog around the town",
+						Completed: false,
+					},
+				})
+			},
+		},
+
+		"No Todos Found": {
+			expectedCode:     200,
+			expectedResponse: []models.Todo{},
+			mockSetup: func(mockedComponent *MockTodoServiceImpl) {
+				mockedComponent.On("ReturnAllTodos").Return([]models.Todo{})
 			},
 		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			for _, mock := range tt.mocks {
-				setupMock(&tt.mockService.Mock, mock.mockMethodName, mock.mockedResponse)
-			}
-			setupTodoController(tt.mockService)
+			mockTodoService := new(MockTodoServiceImpl)
+			tt.mockSetup(mockTodoService)
+			setupTodoController(mockTodoService)
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			httpWriter := httptest.NewRecorder()
@@ -139,112 +190,16 @@ func TestReturnAllTodos(t *testing.T) {
 
 }
 
-func TestReturnAllTodosSingleTodo(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
-	var mockTodo = models.Todo{
-		Id:        "1",
-		Title:     "Bake cake",
-		Desc:      "Bake a carrot cake for tomorrow's fate",
-		Completed: false,
-	}
-	testObj.On("ReturnAllTodos").Return([]models.Todo{mockTodo})
-	setupTodoController(testObj)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	httpWriter := httptest.NewRecorder()
-
-	todoController.ReturnAllTodos(httpWriter, req)
-	res := httpWriter.Result()
-	defer res.Body.Close()
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("error when reading HTTP response: [%v]", err)
-	}
-
-	if httpWriter.Code != http.StatusOK {
-		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
-	}
-
-	expectedResponse, _ := json.Marshal([]models.Todo{mockTodo})
-	require.JSONEq(t, string(expectedResponse), string(data))
-}
-
-func funcName(testObj *MockTodoServiceImpl, mockTodo models.Todo) *mock.Call {
-	return testObj.On("ReturnAllTodos").Return([]models.Todo{mockTodo})
-}
-
-func TestReturnAllTodosMultipleTodos(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
-	var mockTodos = []models.Todo{
-		{
-			Id:        "1",
-			Title:     "Bake cake",
-			Desc:      "Bake a carrot cake for tomorrow's fate",
-			Completed: false,
-		},
-		{
-			Id:        "2",
-			Title:     "Iron shirts",
-			Desc:      "Iron shirts within dryer",
-			Completed: false,
-		},
-		{
-			Id:        "3",
-			Title:     "Walk dog",
-			Desc:      "Walk the dog around the town",
-			Completed: false,
-		}}
-	testObj.On("ReturnAllTodos").Return(mockTodos)
-
-	setupTodoController(testObj)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	httpWriter := httptest.NewRecorder()
-
-	todoController.ReturnAllTodos(httpWriter, req)
-	res := httpWriter.Result()
-	defer res.Body.Close()
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("error when reading HTTP response: [%v]", err)
-	}
-	if httpWriter.Code != http.StatusOK {
-		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
-	}
-	expectedResponse, _ := json.Marshal(mockTodos)
-	require.JSONEq(t, string(expectedResponse), string(data))
-}
-
-func TestReturnAllTodosMultipleNilTodo(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
-	testObj.On("ReturnAllTodos").Return([]models.Todo{})
-
-	setupTodoController(testObj)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	httpWriter := httptest.NewRecorder()
-
-	todoController.ReturnAllTodos(httpWriter, req)
-	res := httpWriter.Result()
-	defer res.Body.Close()
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("error when reading HTTP response: [%v]", err)
-	}
-	if httpWriter.Code != http.StatusOK {
-		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
-	}
-	expectedResponse, _ := json.Marshal([]models.Todo{})
-	require.JSONEq(t, string(expectedResponse), string(data))
-}
-
 func TestReturnSingleTodoTodoFound(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
+	mockTodoService := new(MockTodoServiceImpl)
 	var mockTodo = models.Todo{
 		Id:        "1",
 		Title:     "Bake cake",
 		Desc:      "Bake a carrot cake for tomorrow's fate",
 		Completed: false,
 	}
-	testObj.On("ReturnSingleTodo", "1").Return(mockTodo, nil)
-	setupTodoController(testObj)
+	mockTodoService.On("ReturnSingleTodo", "1").Return(mockTodo, nil)
+	setupTodoController(mockTodoService)
 	req := httptest.NewRequest(http.MethodGet, "/1", nil)
 	reqPathParams := map[string]string{
 		"id": "1",
@@ -267,9 +222,9 @@ func TestReturnSingleTodoTodoFound(t *testing.T) {
 }
 
 func TestReturnSingleTodoTodoNotFound(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
-	testObj.On("ReturnSingleTodo", "999").Return(models.Todo{}, errors.New("could not find todo with id [999]"))
-	setupTodoController(testObj)
+	mockTodoService := new(MockTodoServiceImpl)
+	mockTodoService.On("ReturnSingleTodo", "999").Return(models.Todo{}, errors.New("could not find todo with id [999]"))
+	setupTodoController(mockTodoService)
 	req := httptest.NewRequest(http.MethodGet, "/999", nil)
 	reqPathParams := map[string]string{
 		"id": "999",
@@ -292,15 +247,15 @@ func TestReturnSingleTodoTodoNotFound(t *testing.T) {
 }
 
 func TestCreateNewTodoSuccessfully(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
+	mockTodoService := new(MockTodoServiceImpl)
 	var mockTodo = models.Todo{
 		Id:        "1",
 		Title:     "Bake cake",
 		Desc:      "Bake a carrot cake for tomorrow's fate",
 		Completed: false,
 	}
-	testObj.On("CreateNewTodo", mockTodo).Return(mockTodo, nil)
-	setupTodoController(testObj)
+	mockTodoService.On("CreateNewTodo", mockTodo).Return(mockTodo, nil)
+	setupTodoController(mockTodoService)
 
 	mockTodoJson, _ := json.Marshal(mockTodo)
 	bodyReader := strings.NewReader(string(mockTodoJson))
@@ -321,9 +276,9 @@ func TestCreateNewTodoSuccessfully(t *testing.T) {
 }
 
 func TestCreateNewTodoInvalidRequestBody(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
+	mockTodoService := new(MockTodoServiceImpl)
 
-	setupTodoController(testObj)
+	setupTodoController(mockTodoService)
 	bodyReader := strings.NewReader("{invalid:jsonsjs}}")
 	req := httptest.NewRequest(http.MethodPost, "/", bodyReader)
 	httpWriter := httptest.NewRecorder()
@@ -342,15 +297,15 @@ func TestCreateNewTodoInvalidRequestBody(t *testing.T) {
 }
 
 func TestCreateNewTodoTodoWithDuplicateIdAlreadyExists(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
+	mockTodoService := new(MockTodoServiceImpl)
 	var mockTodo = models.Todo{
 		Id:        "1",
 		Title:     "Bake cake",
 		Desc:      "Bake a carrot cake for tomorrow's fate",
 		Completed: false,
 	}
-	testObj.On("CreateNewTodo", mockTodo).Return(models.Todo{}, errors.New("todo with id [1] already exists"))
-	setupTodoController(testObj)
+	mockTodoService.On("CreateNewTodo", mockTodo).Return(models.Todo{}, errors.New("todo with id [1] already exists"))
+	setupTodoController(mockTodoService)
 
 	mockTodoJson, _ := json.Marshal(mockTodo)
 	bodyReader := strings.NewReader(string(mockTodoJson))
@@ -371,9 +326,9 @@ func TestCreateNewTodoTodoWithDuplicateIdAlreadyExists(t *testing.T) {
 }
 
 func TestDeleteTodo(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
-	testObj.On("DeleteTodo", "1").Return()
-	setupTodoController(testObj)
+	mockTodoService := new(MockTodoServiceImpl)
+	mockTodoService.On("DeleteTodo", "1").Return()
+	setupTodoController(mockTodoService)
 	reqPathParams := map[string]string{
 		"id": "1",
 	}
@@ -395,15 +350,15 @@ func TestDeleteTodo(t *testing.T) {
 }
 
 func TestUpdateTodoTodoUpdatedSuccessfully(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
+	mockTodoService := new(MockTodoServiceImpl)
 	var mockUpdatedTodo = models.Todo{
 		Id:        "1",
 		Title:     "Bake cake",
 		Desc:      "Bake a lemon cake for tomorrow's fate",
 		Completed: true,
 	}
-	testObj.On("UpdateTodo", mockUpdatedTodo).Return(mockUpdatedTodo, nil)
-	setupTodoController(testObj)
+	mockTodoService.On("UpdateTodo", mockUpdatedTodo).Return(mockUpdatedTodo, nil)
+	setupTodoController(mockTodoService)
 	mockTodoJson, _ := json.Marshal(mockUpdatedTodo)
 	bodyReader := strings.NewReader(string(mockTodoJson))
 	req := httptest.NewRequest(http.MethodPut, "/1", bodyReader)
@@ -427,9 +382,9 @@ func TestUpdateTodoTodoUpdatedSuccessfully(t *testing.T) {
 }
 
 func TestUpdateTodoInvalidRequestBody(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
+	mockTodoService := new(MockTodoServiceImpl)
 
-	setupTodoController(testObj)
+	setupTodoController(mockTodoService)
 	bodyReader := strings.NewReader("{invalid:jsonsjs}}")
 	req := httptest.NewRequest(http.MethodPatch, "/", bodyReader)
 	httpWriter := httptest.NewRecorder()
@@ -448,16 +403,16 @@ func TestUpdateTodoInvalidRequestBody(t *testing.T) {
 }
 
 func TestUpdateTodoTodoNotFoundCreatedSuccessfully(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
+	mockTodoService := new(MockTodoServiceImpl)
 	var mockUpdatedTodo = models.Todo{
 		Id:        "1",
 		Title:     "Bake cake",
 		Desc:      "Bake a lemon cake for tomorrow's fate",
 		Completed: true,
 	}
-	testObj.On("UpdateTodo", mockUpdatedTodo).Return(models.Todo{}, errors.New("could not find todo with id [1]"))
-	testObj.On("CreateNewTodo", mockUpdatedTodo).Return(mockUpdatedTodo, nil)
-	setupTodoController(testObj)
+	mockTodoService.On("UpdateTodo", mockUpdatedTodo).Return(models.Todo{}, errors.New("could not find todo with id [1]"))
+	mockTodoService.On("CreateNewTodo", mockUpdatedTodo).Return(mockUpdatedTodo, nil)
+	setupTodoController(mockTodoService)
 	mockTodoJson, _ := json.Marshal(mockUpdatedTodo)
 	bodyReader := strings.NewReader(string(mockTodoJson))
 	req := httptest.NewRequest(http.MethodPut, "/1", bodyReader)
@@ -481,16 +436,16 @@ func TestUpdateTodoTodoNotFoundCreatedSuccessfully(t *testing.T) {
 }
 
 func TestUpdateTodoTodoNotFoundCreatedUnSuccessfullyDueToDuplicateId(t *testing.T) {
-	testObj := new(MockTodoServiceImpl)
+	mockTodoService := new(MockTodoServiceImpl)
 	var mockUpdatedTodo = models.Todo{
 		Id:        "1",
 		Title:     "Bake cake",
 		Desc:      "Bake a lemon cake for tomorrow's fate",
 		Completed: true,
 	}
-	testObj.On("UpdateTodo", mockUpdatedTodo).Return(models.Todo{}, errors.New("could not find todo with id [1]"))
-	testObj.On("CreateNewTodo", mockUpdatedTodo).Return(models.Todo{}, errors.New("todo with id [1] already exists"))
-	setupTodoController(testObj)
+	mockTodoService.On("UpdateTodo", mockUpdatedTodo).Return(models.Todo{}, errors.New("could not find todo with id [1]"))
+	mockTodoService.On("CreateNewTodo", mockUpdatedTodo).Return(models.Todo{}, errors.New("todo with id [1] already exists"))
+	setupTodoController(mockTodoService)
 	mockTodoJson, _ := json.Marshal(mockUpdatedTodo)
 	bodyReader := strings.NewReader(string(mockTodoJson))
 	req := httptest.NewRequest(http.MethodPut, "/1", bodyReader)
