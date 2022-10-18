@@ -293,66 +293,88 @@ func TestDeleteTodo(t *testing.T) {
 	}
 }
 
-func TestUpdateTodoValidationError(t *testing.T) {
-	setupTest()
-	newTodo := models.Todo{
-		Id:        "1",
-		Title:     "Example Title",
-		Desc:      "Example Description",
-		Completed: false,
-	}
-	UpdatedTodo := models.Todo{
-		Title:     "Updated Example Title",
-		Desc:      "Updated Example Description",
-		Completed: true,
-	}
-	todoService.Todos = append(todoService.Todos, newTodo)
-	_, err := todoService.UpdateTodo(UpdatedTodo)
-	if err == nil {
-		t.Error("expected error but no error returned")
-	}
-	if err.Error() != "todo Id cannot be null" {
-		t.Error("expected error message was not found, instead was:", err.Error())
-	}
-}
+func TestUpdateTodo(t *testing.T) {
 
-func TestUpdateTodoNoTodoFound(t *testing.T) {
-	setupTest()
-	UpdatedTodo := models.Todo{
-		Id:        "1",
-		Title:     "Updated Example Title",
-		Desc:      "Updated Example Description",
-		Completed: true,
+	tests := map[string]struct {
+		prerequisite         []models.Todo
+		input                models.Todo
+		expected             models.Todo
+		errorExpected        bool
+		expectedErrorMessage string
+	}{
+		"Validation Error": {
+			prerequisite: []models.Todo{
+				{
+					Id:        "1",
+					Title:     "Example Title",
+					Desc:      "Example Description",
+					Completed: false,
+				},
+			},
+			expected: models.Todo{},
+			input: models.Todo{
+				Title:     "Updated Example Title",
+				Desc:      "Updated Example Description",
+				Completed: true,
+			},
+			errorExpected:        true,
+			expectedErrorMessage: "todo Id cannot be null",
+		},
+		"No Todo With Id Found": {
+			prerequisite: []models.Todo{},
+			expected:     models.Todo{},
+			input: models.Todo{
+				Id:        "1",
+				Title:     "Updated Example Title",
+				Desc:      "Updated Example Description",
+				Completed: true,
+			},
+			errorExpected:        true,
+			expectedErrorMessage: "could not find todo with id [1]",
+		},
+		"Update Todo Successfully": {
+			prerequisite: []models.Todo{
+				{
+					Id:        "1",
+					Title:     "Example Title",
+					Desc:      "Example Description",
+					Completed: false,
+				},
+			},
+			expected: models.Todo{
+				Id:        "1",
+				Title:     "Updated Example Title",
+				Desc:      "Updated Example Description",
+				Completed: true,
+			},
+			input: models.Todo{
+				Id:        "1",
+				Title:     "Updated Example Title",
+				Desc:      "Updated Example Description",
+				Completed: true,
+			},
+			errorExpected: false,
+		},
 	}
-	_, err := todoService.UpdateTodo(UpdatedTodo)
-	if err == nil {
-		t.Error("expected error but no error returned")
-	}
-	if err.Error() != "could not find todo with id [1]" {
-		t.Error("expected error message was not found, instead was:", err.Error())
-	}
-}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			setupTest()
+			todoService.Todos = append(todoService.Todos, tt.prerequisite...)
+			actual, err := todoService.UpdateTodo(tt.input)
+			diff := cmp.Diff(tt.expected, actual)
+			if diff != "" {
+				t.Fatalf(diff)
+			}
+			if tt.errorExpected {
+				if err == nil {
+					t.Fatalf("Error expected but none occured")
+				} else if err.Error() != tt.expectedErrorMessage {
+					t.Fatalf("Error message not as expected, expected [%v] but was [%v]", tt.expectedErrorMessage, err.Error())
+				}
 
-func TestUpdateTodoSuccessfully(t *testing.T) {
-	setupTest()
-	newTodo := models.Todo{
-		Id:        "1",
-		Title:     "Example Title",
-		Desc:      "Example Description",
-		Completed: false,
-	}
-	UpdatedTodo := models.Todo{
-		Id:        "1",
-		Title:     "Updated Example Title",
-		Desc:      "Updated Example Description",
-		Completed: true,
-	}
-	todoService.Todos = append(todoService.Todos, newTodo)
-	_, err := todoService.UpdateTodo(UpdatedTodo)
-	if err != nil {
-		t.Error("expected no error but error returned")
-	}
-	if todoService.Todos[0] != UpdatedTodo {
-		t.Error("expected todo:", UpdatedTodo, "but received todo:", todoService.Todos[0])
+			} else if !tt.errorExpected && err != nil {
+				t.Fatalf("Error occured when none expected: [%v]", err)
+			}
+		})
 	}
 }
