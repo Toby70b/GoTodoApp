@@ -78,7 +78,7 @@ func TestReturnAllTodos(t *testing.T) {
 		mockSetup        func(mockedComponent *MockTodoServiceImpl)
 	}{
 		"Return Single Todo": {
-			expectedCode: 200,
+			expectedCode: http.StatusOK,
 			expectedResponse: []models.Todo{
 				{
 					Id:        "1",
@@ -99,7 +99,7 @@ func TestReturnAllTodos(t *testing.T) {
 			},
 		},
 		"Return Multiple Todos": {
-			expectedCode: 200,
+			expectedCode: http.StatusOK,
 			expectedResponse: []models.Todo{
 				{
 					Id:        "1",
@@ -143,9 +143,8 @@ func TestReturnAllTodos(t *testing.T) {
 				})
 			},
 		},
-
 		"No Todos Found": {
-			expectedCode:     200,
+			expectedCode:     http.StatusOK,
 			expectedResponse: []models.Todo{},
 			mockSetup: func(mockedComponent *MockTodoServiceImpl) {
 				mockedComponent.On("ReturnAllTodos").Return([]models.Todo{})
@@ -186,15 +185,16 @@ func TestReturnSingleTodo(t *testing.T) {
 	}{
 		"No Todo with matching id found": {
 			todoIdPathParam:  "999",
-			expectedCode:     404,
-			expectedResponse: "could not find todo with id [999]",
+			expectedCode:     http.StatusNotFound,
+			expectedResponse: "Could not find todo with id [999]",
 			mockSetup: func(mockedComponent *MockTodoServiceImpl) {
-				mockedComponent.On("ReturnSingleTodo", "999").Return(models.Todo{}, errors.New("could not find todo with id [999]"))
+				mockedComponent.On("ReturnSingleTodo", "999").
+					Return(models.Todo{}, errors.New("could not find todo with id [999]"))
 			},
 		},
 		"Todo with matching id found": {
 			todoIdPathParam: "1",
-			expectedCode:    200,
+			expectedCode:    http.StatusOK,
 			expectedResponse: models.Todo{
 				Id:        "1",
 				Title:     "Bake cake",
@@ -237,86 +237,86 @@ func TestReturnSingleTodo(t *testing.T) {
 			require.JSONEq(t, string(expectedResponse), string(data))
 		})
 	}
-
 }
 
-func TestCreateNewTodoSuccessfully(t *testing.T) {
-	mockTodoService := new(MockTodoServiceImpl)
-	var mockTodo = models.Todo{
-		Id:        "1",
-		Title:     "Bake cake",
-		Desc:      "Bake a carrot cake for tomorrow's fate",
-		Completed: false,
-	}
-	mockTodoService.On("CreateNewTodo", mockTodo).Return(mockTodo, nil)
-	setupTodoController(mockTodoService)
+func TestCreateNewTodo(t *testing.T) {
 
-	mockTodoJson, _ := json.Marshal(mockTodo)
-	bodyReader := strings.NewReader(string(mockTodoJson))
-	req := httptest.NewRequest(http.MethodPost, "/", bodyReader)
-	httpWriter := httptest.NewRecorder()
-	todoController.CreateNewTodo(httpWriter, req)
-	res := httpWriter.Result()
-	defer res.Body.Close()
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("error when reading HTTP response: [%v]", err)
+	tests := map[string]struct {
+		requestBody      interface{}
+		expectedCode     int
+		expectedResponse interface{}
+		mockSetup        func(mockedComponent *MockTodoServiceImpl)
+	}{
+		"Request body invalid": {
+			requestBody:      "{invalid:json}}",
+			expectedCode:     http.StatusInternalServerError,
+			expectedResponse: "Internal Server Error",
+		},
+		"Todo with matching id already exists": {
+			requestBody: models.Todo{
+				Id:        "1",
+				Title:     "Bake cake",
+				Desc:      "Bake a carrot cake for tomorrow's fate",
+				Completed: false,
+			},
+			expectedCode:     http.StatusConflict,
+			expectedResponse: "Todo with id [1] already exists",
+			mockSetup: func(mockedComponent *MockTodoServiceImpl) {
+				mockedComponent.On("CreateNewTodo", mock.Anything).
+					Return(models.Todo{}, errors.New("todo with id [1] already exists"))
+			},
+		},
+		"Todo created successfully": {
+			requestBody: models.Todo{
+				Id:        "1",
+				Title:     "Bake cake",
+				Desc:      "Bake a carrot cake for tomorrow's fate",
+				Completed: false,
+			},
+			expectedCode: http.StatusCreated,
+			expectedResponse: models.Todo{
+				Id:        "1",
+				Title:     "Bake cake",
+				Desc:      "Bake a carrot cake for tomorrow's fate",
+				Completed: false,
+			},
+			mockSetup: func(mockedComponent *MockTodoServiceImpl) {
+				mockedComponent.On("CreateNewTodo", mock.Anything).Return(models.Todo{
+					Id:        "1",
+					Title:     "Bake cake",
+					Desc:      "Bake a carrot cake for tomorrow's fate",
+					Completed: false,
+				}, nil)
+			},
+		},
 	}
-	if httpWriter.Code != http.StatusCreated {
-		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusCreated, httpWriter.Code)
-	}
-	expectedResponse, _ := json.Marshal(mockTodo)
-	require.JSONEq(t, string(expectedResponse), string(data))
-}
 
-func TestCreateNewTodoInvalidRequestBody(t *testing.T) {
-	mockTodoService := new(MockTodoServiceImpl)
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			mockTodoService := new(MockTodoServiceImpl)
 
-	setupTodoController(mockTodoService)
-	bodyReader := strings.NewReader("{invalid:jsonsjs}}")
-	req := httptest.NewRequest(http.MethodPost, "/", bodyReader)
-	httpWriter := httptest.NewRecorder()
-	todoController.CreateNewTodo(httpWriter, req)
-	res := httpWriter.Result()
-	defer res.Body.Close()
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("error when reading HTTP response: [%v]", err)
-	}
-	if httpWriter.Code != http.StatusInternalServerError {
-		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusInternalServerError, httpWriter.Code)
-	}
-	var expectedResponse = "\"Internal Server Error\""
-	require.JSONEq(t, expectedResponse, string(data))
-}
+			if tt.mockSetup != nil {
+				tt.mockSetup(mockTodoService)
+			}
 
-func TestCreateNewTodoTodoWithDuplicateIdAlreadyExists(t *testing.T) {
-	mockTodoService := new(MockTodoServiceImpl)
-	var mockTodo = models.Todo{
-		Id:        "1",
-		Title:     "Bake cake",
-		Desc:      "Bake a carrot cake for tomorrow's fate",
-		Completed: false,
-	}
-	mockTodoService.On("CreateNewTodo", mockTodo).Return(models.Todo{}, errors.New("todo with id [1] already exists"))
-	setupTodoController(mockTodoService)
+			setupTodoController(mockTodoService)
 
-	mockTodoJson, _ := json.Marshal(mockTodo)
-	bodyReader := strings.NewReader(string(mockTodoJson))
-	req := httptest.NewRequest(http.MethodPost, "/", bodyReader)
-	httpWriter := httptest.NewRecorder()
-	todoController.CreateNewTodo(httpWriter, req)
-	res := httpWriter.Result()
-	defer res.Body.Close()
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("error when reading HTTP response: [%v]", err)
+			mockTodoJson, _ := json.Marshal(tt.requestBody)
+			bodyReader := strings.NewReader(string(mockTodoJson))
+			req := httptest.NewRequest(http.MethodPost, "/", bodyReader)
+			httpWriter := httptest.NewRecorder()
+			todoController.CreateNewTodo(httpWriter, req)
+
+			res := httpWriter.Result()
+			defer res.Body.Close()
+			data := getHttpResponse(t, res)
+			if httpWriter.Code != tt.expectedCode {
+				t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", tt.expectedCode, httpWriter.Code)
+			}
+			expectedResponse, _ := json.Marshal(tt.expectedResponse)
+			require.JSONEq(t, string(expectedResponse), string(data))
+		})
 	}
-	if httpWriter.Code != http.StatusConflict {
-		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusConflict, httpWriter.Code)
-	}
-	var expectedResponse = "\"Todo with id [1] already exists\""
-	require.JSONEq(t, expectedResponse, string(data))
 }
 
 func TestDeleteTodo(t *testing.T) {
