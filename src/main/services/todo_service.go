@@ -74,7 +74,7 @@ func (service *TodoServiceImpl) DeleteTodo(id string) {
 	}
 }
 
-// UpdateTodo updates a Todo item with a id matching that of the Todo item pass as a parameter. If a Todo item with
+// UpdateTodo updates a Todo item with an id matching that of the Todo item pass as a parameter. If a Todo item with
 // an id matching that of the Todo item passed as a parameter cannot be found then an error will be returned.
 //
 // The Todo item passed as a parameter must include an id
