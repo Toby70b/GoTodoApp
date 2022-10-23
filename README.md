@@ -15,6 +15,6 @@ The API manages "Todo" items defined as below:
 }
 ```
 
-The API supports GET, POST, PUT and DELETE functionality. As this is a simple program validation is kept to a minimum.
+The API supports GET, POST, PUT and DELETE functionality. As this is a simple web app, validation is kept to a minimum and should be no means be treated as production-ready.
 
 As utilizing a real DB service wasn't the purpose of the project the API uses an in-memory DB.
