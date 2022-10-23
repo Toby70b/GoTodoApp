@@ -23,14 +23,14 @@ func NewTodoController(todoService services.TodoService) TodoController {
 	return TodoController{todoService}
 }
 
-// returnAllTodos returns all todos items persisted within the DB
+// ReturnAllTodos returns all todos items persisted within the DB
 func (controller *TodoController) ReturnAllTodos(writer http.ResponseWriter, _ *http.Request) {
 	fmt.Println("Endpoint Hit: returnAllTodos")
 	todos := controller.todoService.ReturnAllTodos()
 	utils.ReturnJsonResponse(writer, http.StatusOK, todos)
 }
 
-// returnSingleTodo returns a single todo item persisted within the DB with an id matching the id passed as a path parameter.
+// ReturnSingleTodo returns a single todo item persisted within the DB with an id matching the id passed as a path parameter.
 // The path param is accessed via the map within request parameter. If an existing todo item with an id matching that of
 // the new todo item is not found, and error will be returned instead
 func (controller *TodoController) ReturnSingleTodo(writer http.ResponseWriter, request *http.Request) {
@@ -48,7 +48,7 @@ func (controller *TodoController) ReturnSingleTodo(writer http.ResponseWriter, r
 	}
 }
 
-// createNewTodo creates a new todo item and persist it within the DB. If an existing todo item with an id matching
+// CreateNewTodo creates a new todo item and persist it within the DB. If an existing todo item with an id matching
 // that of the new todo item is found, and error will be returned instead
 func (controller *TodoController) CreateNewTodo(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: createNewTodo")
@@ -69,7 +69,7 @@ func (controller *TodoController) CreateNewTodo(writer http.ResponseWriter, requ
 	}
 }
 
-// deleteTodo removes a todo item persisted within the DB with an id matching the id passed as a path parameter.
+// DeleteTodo removes a todo item persisted within the DB with an id matching the id passed as a path parameter.
 // The path param is accessed via the map within request parameter
 func (controller *TodoController) DeleteTodo(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: deleteTodo")
@@ -79,7 +79,7 @@ func (controller *TodoController) DeleteTodo(writer http.ResponseWriter, request
 	utils.ReturnJsonResponse(writer, http.StatusOK, "Todo Deleted Successfully")
 }
 
-// updateTodo modifies an existing todo item with the details from the todo item passed in the request. If an existing
+// UpdateTodo modifies an existing todo item with the details from the todo item passed in the request. If an existing
 // todo item with an id matching that of the new todo item is not found, and error will be returned instead
 func (controller *TodoController) UpdateTodo(writer http.ResponseWriter, request *http.Request) {
 	fmt.Println("Endpoint Hit: updateTodo")
