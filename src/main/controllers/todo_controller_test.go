@@ -58,10 +58,6 @@ func setupTodoController(service *MockTodoServiceImpl) {
 	todoController = NewTodoController(service)
 }
 
-func setupMock(mockTodoService *mock.Mock, methodName string, mockResponse interface{}) {
-	mockTodoService.On(methodName).Return(mockResponse)
-}
-
 func getHttpResponse(t *testing.T, res *http.Response) []byte {
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -72,16 +68,6 @@ func getHttpResponse(t *testing.T, res *http.Response) []byte {
 		t.Errorf("error when reading HTTP response: [%v]", err)
 	}
 	return data
-}
-
-type testMock struct {
-	mockedService      mock.Mock
-	serviceMockMethods []mockMethodDetails
-}
-
-type mockMethodDetails struct {
-	name         string
-	mockResponse interface{}
 }
 
 func TestReturnAllTodos(t *testing.T) {
@@ -190,60 +176,68 @@ func TestReturnAllTodos(t *testing.T) {
 
 }
 
-func TestReturnSingleTodoTodoFound(t *testing.T) {
-	mockTodoService := new(MockTodoServiceImpl)
-	var mockTodo = models.Todo{
-		Id:        "1",
-		Title:     "Bake cake",
-		Desc:      "Bake a carrot cake for tomorrow's fate",
-		Completed: false,
-	}
-	mockTodoService.On("ReturnSingleTodo", "1").Return(mockTodo, nil)
-	setupTodoController(mockTodoService)
-	req := httptest.NewRequest(http.MethodGet, "/1", nil)
-	reqPathParams := map[string]string{
-		"id": "1",
-	}
-	req = mux.SetURLVars(req, reqPathParams)
-	httpWriter := httptest.NewRecorder()
+func TestReturnSingleTodo(t *testing.T) {
 
-	todoController.ReturnSingleTodo(httpWriter, req)
-	res := httpWriter.Result()
-	defer res.Body.Close()
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("error when reading HTTP response: [%v]", err)
+	tests := map[string]struct {
+		todoIdPathParam  string
+		expectedCode     int
+		expectedResponse interface{}
+		mockSetup        func(mockedComponent *MockTodoServiceImpl)
+	}{
+		"No Todo with matching id found": {
+			todoIdPathParam:  "999",
+			expectedCode:     404,
+			expectedResponse: "could not find todo with id [999]",
+			mockSetup: func(mockedComponent *MockTodoServiceImpl) {
+				mockedComponent.On("ReturnSingleTodo", "999").Return(models.Todo{}, errors.New("could not find todo with id [999]"))
+			},
+		},
+		"Todo with matching id found": {
+			todoIdPathParam: "1",
+			expectedCode:    200,
+			expectedResponse: models.Todo{
+				Id:        "1",
+				Title:     "Bake cake",
+				Desc:      "Bake a carrot cake for tomorrow's fate",
+				Completed: false,
+			},
+			mockSetup: func(mockedComponent *MockTodoServiceImpl) {
+				mockedComponent.On("ReturnSingleTodo", "1").Return(
+					models.Todo{
+						Id:        "1",
+						Title:     "Bake cake",
+						Desc:      "Bake a carrot cake for tomorrow's fate",
+						Completed: false,
+					}, nil)
+			},
+		},
 	}
-	if httpWriter.Code != http.StatusOK {
-		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusOK, httpWriter.Code)
-	}
-	expectedResponse, _ := json.Marshal(mockTodo)
-	require.JSONEq(t, string(expectedResponse), string(data))
-}
 
-func TestReturnSingleTodoTodoNotFound(t *testing.T) {
-	mockTodoService := new(MockTodoServiceImpl)
-	mockTodoService.On("ReturnSingleTodo", "999").Return(models.Todo{}, errors.New("could not find todo with id [999]"))
-	setupTodoController(mockTodoService)
-	req := httptest.NewRequest(http.MethodGet, "/999", nil)
-	reqPathParams := map[string]string{
-		"id": "999",
-	}
-	req = mux.SetURLVars(req, reqPathParams)
-	httpWriter := httptest.NewRecorder()
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			mockTodoService := new(MockTodoServiceImpl)
+			tt.mockSetup(mockTodoService)
+			setupTodoController(mockTodoService)
 
-	todoController.ReturnSingleTodo(httpWriter, req)
-	res := httpWriter.Result()
-	defer res.Body.Close()
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("error when reading HTTP response: [%v]", err)
+			req := httptest.NewRequest(http.MethodGet, "/"+tt.todoIdPathParam, nil)
+			reqPathParams := map[string]string{
+				"id": tt.todoIdPathParam,
+			}
+			req = mux.SetURLVars(req, reqPathParams)
+			httpWriter := httptest.NewRecorder()
+
+			todoController.ReturnSingleTodo(httpWriter, req)
+			res := httpWriter.Result()
+			defer res.Body.Close()
+			data := getHttpResponse(t, res)
+			if httpWriter.Code != tt.expectedCode {
+				t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", tt.expectedCode, httpWriter.Code)
+			}
+			expectedResponse, _ := json.Marshal(tt.expectedResponse)
+			require.JSONEq(t, string(expectedResponse), string(data))
+		})
 	}
-	if httpWriter.Code != http.StatusNotFound {
-		t.Errorf("unexpected HTTP response code, expected [%v] but recieved [%v]", http.StatusNotFound, httpWriter.Code)
-	}
-	var expectedResponse = "\"could not find todo with id [999]\""
-	require.JSONEq(t, expectedResponse, string(data))
+
 }
 
 func TestCreateNewTodoSuccessfully(t *testing.T) {
