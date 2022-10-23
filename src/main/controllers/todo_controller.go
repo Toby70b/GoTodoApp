@@ -41,7 +41,7 @@ func (controller *TodoController) ReturnSingleTodo(writer http.ResponseWriter, r
 
 	if err != nil {
 		log.Println(err.Error())
-		utils.ReturnJsonResponse(writer, http.StatusNotFound, fmt.Sprintf("could not find todo with id [%s]", todoId))
+		utils.ReturnJsonResponse(writer, http.StatusNotFound, fmt.Sprintf("Could not find todo with id [%s]", todoId))
 	} else {
 		utils.ReturnJsonResponse(writer, http.StatusOK, todo)
 
