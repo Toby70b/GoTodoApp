@@ -183,7 +183,7 @@ func TestReturnSingleTodo(t *testing.T) {
 		expectedResponse interface{}
 		mockSetup        func(mockedComponent *MockTodoServiceImpl)
 	}{
-		"No Todo with matching id found": {
+		"No Todo With Matching Id Found": {
 			todoIdPathParam:  "999",
 			expectedCode:     http.StatusNotFound,
 			expectedResponse: "Could not find todo with id [999]",
@@ -192,7 +192,7 @@ func TestReturnSingleTodo(t *testing.T) {
 					Return(models.Todo{}, errors.New("could not find todo with id [999]"))
 			},
 		},
-		"Todo with matching id found": {
+		"Todo With Matching Id Found": {
 			todoIdPathParam: "1",
 			expectedCode:    http.StatusOK,
 			expectedResponse: models.Todo{
@@ -247,12 +247,12 @@ func TestCreateNewTodo(t *testing.T) {
 		expectedResponse interface{}
 		mockSetup        func(mockedComponent *MockTodoServiceImpl)
 	}{
-		"Request body invalid": {
+		"Request Body Invalid": {
 			requestBody:      "{invalid:json}}",
 			expectedCode:     http.StatusInternalServerError,
 			expectedResponse: "Internal Server Error",
 		},
-		"Todo with matching id already exists": {
+		"Todo With Matching Id Already Exists": {
 			requestBody: models.Todo{
 				Id:        "1",
 				Title:     "Bake cake",
@@ -266,7 +266,7 @@ func TestCreateNewTodo(t *testing.T) {
 					Return(models.Todo{}, errors.New("todo with id [1] already exists"))
 			},
 		},
-		"Todo created successfully": {
+		"Todo Created Successfully": {
 			requestBody: models.Todo{
 				Id:        "1",
 				Title:     "Bake cake",
